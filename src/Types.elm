@@ -4,6 +4,7 @@ import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Dict exposing (Dict)
 import GraphicSVG.Widget as Widget
+import Lamdera exposing (ClientId, SessionId)
 import Set exposing (Set)
 import Url exposing (Url)
 
@@ -51,13 +52,21 @@ type GameMsg
 
 type alias FrontendModel =
     { key : Key
-    , game : GameModel
+    , roomId : Maybe RoomId
+    , gameModel : GameModel
     , gameWidgetState : Widget.Model
+    , roomIdInputText : String
     }
 
 
+type alias RoomId =
+    String
+
+
 type alias BackendModel =
-    {}
+    { rooms : Dict RoomId (Set ClientId)
+    , gameModel : GameModel
+    }
 
 
 type FrontendMsg
@@ -66,15 +75,19 @@ type FrontendMsg
     | NoOpFrontendMsg
     | GameWidgetMsg Widget.Msg
     | GameMsg GameMsg
+    | SubmitRoomId
+    | SetRoomIdInputText String
 
 
 type ToBackend
-    = NoOpToBackend
+    = ForwardGameMsg GameMsg
+    | JoinOrCreateRoom RoomId
 
 
 type BackendMsg
-    = NoOpBackendMsg
+    = ClientConnected SessionId ClientId
+    | ClientDisconnected SessionId ClientId
 
 
 type ToFrontend
-    = NoOpToFrontend
+    = UpdateGameModel GameModel
