@@ -2,6 +2,7 @@ module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
+import Debug
 import Element exposing (..)
 import Element.Input as Input
 import GraphicSVG.Widget as GraphicWidget
@@ -122,7 +123,9 @@ joinRoomForm roomId =
     let
         joinRoomButton =
             W.button
-                (Material.containedButton palette |> Customize.elementButton [ Element.width Element.fill ])
+                (Material.containedButton palette
+                    |> Customize.elementButton [ Element.centerX ]
+                )
                 { text = "Enter room", icon = loginIcon, onPress = Just SubmitRoomId }
 
         roomIdInput =
@@ -142,7 +145,12 @@ joinRoomForm roomId =
             (Html.form
                 [ Html.Events.onSubmit SubmitRoomId ]
                 [ Element.layout []
-                    (W.column Material.column [ roomIdInput, joinRoomButton ])
+                    (Element.column
+                        [ Element.padding 50, Element.spacing 10 ]
+                        [ roomIdInput
+                        , joinRoomButton
+                        ]
+                    )
                 ]
             )
         )

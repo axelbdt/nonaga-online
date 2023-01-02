@@ -59,13 +59,18 @@ type alias FrontendModel =
     }
 
 
+type alias Room =
+    { gameModel : GameModel
+    , clients : Set ClientId
+    }
+
+
 type alias RoomId =
     String
 
 
 type alias BackendModel =
-    { rooms : Dict RoomId (Set ClientId)
-    , gameModel : GameModel
+    { rooms : Dict RoomId Room
     }
 
 

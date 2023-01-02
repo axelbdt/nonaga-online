@@ -3,6 +3,7 @@ module Backend exposing (..)
 import Dict
 import Lamdera exposing (ClientId, SessionId, broadcast, onConnect, onDisconnect, sendToFrontend)
 import Nonaga as Game
+import Set
 import Types exposing (..)
 
 
@@ -26,9 +27,13 @@ subscriptions model =
 
 init : ( Model, Cmd BackendMsg )
 init =
-    ( { rooms = Dict.empty, gameModel = Game.initialModel }
+    ( { rooms = Dict.empty }
     , Cmd.none
     )
+
+
+newRoom =
+    { clients = Set.empty, gameModel = Game.initialModel }
 
 
 update : BackendMsg -> Model -> ( Model, Cmd BackendMsg )
