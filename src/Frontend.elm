@@ -101,6 +101,9 @@ updateFromBackend msg model =
         UpdateGameModel gameModel ->
             ( { model | gameModel = gameModel }, Cmd.none )
 
+        JoinedRoom roomId room ->
+            ( model, Cmd.none )
+
 
 view : Model -> Browser.Document FrontendMsg
 view model =

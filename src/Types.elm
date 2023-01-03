@@ -96,3 +96,4 @@ type BackendMsg
 
 type ToFrontend
     = UpdateGameModel GameModel
+    | JoinedRoom RoomId Room

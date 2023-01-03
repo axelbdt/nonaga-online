@@ -32,10 +32,6 @@ init =
     )
 
 
-newRoom =
-    { clients = Set.empty, gameModel = Game.initialModel }
-
-
 update : BackendMsg -> Model -> ( Model, Cmd BackendMsg )
 update msg model =
     case msg of
@@ -53,4 +49,33 @@ updateFromFrontend sessionId clientId msg model =
             ( model, Cmd.none )
 
         JoinOrCreateRoom roomId ->
-            ( model, Cmd.none )
+            let
+                ( joinedRoom, rooms ) =
+                    joinOrCreateRoom clientId roomId model.rooms
+            in
+            ( { model | rooms = rooms }
+            , sendToFrontend clientId (JoinedRoom roomId joinedRoom)
+            )
+
+
+joinOrCreateRoom clientId roomId rooms =
+    case Dict.get roomId rooms of
+        Nothing ->
+            let
+                newRoom =
+                    { clients = Set.singleton clientId, gameModel = Game.initialModel }
+
+                updatedRooms =
+                    Dict.insert roomId newRoom rooms
+            in
+            ( newRoom, updatedRooms )
+
+        Just room ->
+            let
+                updatedRoom =
+                    { room | clients = Set.insert clientId room.clients }
+
+                updatedRooms =
+                    Dict.insert roomId updatedRoom rooms
+            in
+            ( updatedRoom, updatedRooms )
