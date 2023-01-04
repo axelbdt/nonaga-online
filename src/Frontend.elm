@@ -9,6 +9,7 @@ import Element exposing (..)
 import GraphicSVG.Widget as GraphicWidget
 import Lamdera exposing (sendToBackend)
 import Nonaga as Game
+import RoomId as RoomId
 import Types exposing (..)
 import Url
 import Url.Parser as Parser
@@ -40,7 +41,7 @@ init url key =
             parseRoomId url
     in
     ( { key = key
-      , room = Nothing
+      , roomId = Nothing
       , gameModel = Game.initialModel
       , gameWidgetState = gameWidgetState
       , roomIdInputText = ""
@@ -61,6 +62,7 @@ init url key =
 parseRoomId : Url.Url -> Maybe RoomId
 parseRoomId url =
     Parser.parse Parser.string url
+        |> Maybe.map RoomId.parse
 
 
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
@@ -72,7 +74,7 @@ update msg model =
                     ( model
                     , Cmd.batch
                         [ Nav.pushUrl model.key (Url.toString url)
-                        , sendToBackend (JoinOrCreateRoom url.path)
+                        , sendToBackend (JoinOrCreateRoom (RoomId.parse url.path))
                         ]
                     )
 
@@ -106,7 +108,8 @@ update msg model =
 
         SubmitRoomId ->
             ( model
-            , sendToBackend (JoinOrCreateRoom model.roomIdInputText)
+            , sendToBackend
+                (JoinOrCreateRoom (RoomId.parse model.roomIdInputText))
             )
 
 
@@ -116,8 +119,8 @@ updateFromBackend msg model =
         UpdateGameModel gameModel ->
             ( { model | gameModel = gameModel }, Cmd.none )
 
-        JoinedRoom room ->
-            ( { model | room = Just room }, Nav.pushUrl model.key room.id )
+        JoinedRoom roomId ->
+            ( { model | roomId = Just roomId }, Nav.pushUrl model.key (RoomId.toString roomId) )
 
         UpdateBackendModel backendModel ->
             ( { model | backendModel = backendModel }, Cmd.none )
@@ -128,15 +131,15 @@ view model =
     { title = ""
     , body =
         [ Element.layout []
-            (case model.room of
+            (case model.roomId of
                 Nothing ->
                     Element.column []
                         [ Element.text (Debug.toString model.backendModel)
                         , Components.joinRoomForm SubmitRoomId model.roomIdInputText
                         ]
 
-                Just room ->
-                    Element.text room.id
+                Just roomId ->
+                    Element.text (RoomId.toString roomId)
              -- [ GraphicWidget.view model.gameWidgetState (Game.view model.gameModel) ]
             )
         ]

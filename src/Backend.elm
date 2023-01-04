@@ -1,8 +1,10 @@
 module Backend exposing (..)
 
+-- import Nonaga as Game
+
 import Dict
-import Lamdera exposing (ClientId, SessionId, broadcast, onConnect, onDisconnect, sendToFrontend)
-import Nonaga as Game
+import Lamdera exposing (ClientId, SessionId, onConnect, onDisconnect, sendToFrontend)
+import Rooms
 import Set
 import Types exposing (..)
 
@@ -26,7 +28,7 @@ subscriptions model =
 
 
 initialModel =
-    { rooms = Dict.empty }
+    { rooms = Rooms.empty }
 
 
 init : ( Model, Cmd BackendMsg )
@@ -55,14 +57,14 @@ updateFromFrontend sessionId clientId msg model =
         JoinOrCreateRoom roomId ->
             let
                 ( joinedRoomContent, rooms ) =
-                    joinOrCreateRoom clientId roomId model.rooms
+                    Rooms.joinOrCreate clientId roomId model.rooms
 
                 newModel =
                     { model | rooms = rooms }
             in
             ( newModel
             , Cmd.batch
-                [ sendToFrontend clientId (JoinedRoom { id = roomId, content = joinedRoomContent })
+                [ sendToFrontend clientId (JoinedRoom roomId)
                 , broadcastBackendModel newModel
                 ]
             )
@@ -70,29 +72,3 @@ updateFromFrontend sessionId clientId msg model =
 
 broadcastBackendModel backendModel =
     Lamdera.broadcast (UpdateBackendModel backendModel)
-
-
-joinOrCreateRoom clientId roomId rooms =
-    case Dict.get roomId rooms of
-        Nothing ->
-            let
-                newRoom =
-                    { clients = Set.singleton clientId
-
-                    -- , gameModel = Game.initialModel
-                    }
-
-                updatedRooms =
-                    Dict.insert roomId newRoom rooms
-            in
-            ( newRoom, updatedRooms )
-
-        Just room ->
-            let
-                updatedRoom =
-                    { room | clients = Set.insert clientId room.clients }
-
-                updatedRooms =
-                    Dict.insert roomId updatedRoom rooms
-            in
-            ( updatedRoom, updatedRooms )

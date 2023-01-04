@@ -6,6 +6,8 @@ import Dict exposing (Dict)
 import Element exposing (..)
 import GraphicSVG.Widget as Widget
 import Lamdera exposing (ClientId, SessionId)
+import RoomId
+import Rooms
 import Set exposing (Set)
 import Url exposing (Url)
 
@@ -53,7 +55,7 @@ type GameMsg
 
 type alias FrontendModel =
     { key : Key
-    , room : Maybe Room
+    , roomId : Maybe RoomId
     , gameModel : GameModel
     , gameWidgetState : Widget.Model
     , roomIdInputText : String
@@ -61,23 +63,20 @@ type alias FrontendModel =
     }
 
 
-type alias Room =
-    { id : RoomId, content : RoomContent }
+type alias Rooms =
+    Rooms.Rooms
 
 
 type alias RoomContent =
-    { clients : Set ClientId
-
-    -- , gameModel : GameModel
-    }
+    Rooms.RoomContent
 
 
 type alias RoomId =
-    String
+    RoomId.RoomId
 
 
 type alias BackendModel =
-    { rooms : Dict RoomId RoomContent
+    { rooms : Rooms
     }
 
 
@@ -103,5 +102,5 @@ type BackendMsg
 
 type ToFrontend
     = UpdateGameModel GameModel
-    | JoinedRoom Room
+    | JoinedRoom RoomId
     | UpdateBackendModel BackendModel
