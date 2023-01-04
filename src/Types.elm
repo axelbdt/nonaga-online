@@ -3,6 +3,7 @@ module Types exposing (..)
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Dict exposing (Dict)
+import Element exposing (..)
 import GraphicSVG.Widget as Widget
 import Lamdera exposing (ClientId, SessionId)
 import Set exposing (Set)
@@ -52,7 +53,7 @@ type GameMsg
 
 type alias FrontendModel =
     { key : Key
-    , roomId : Maybe RoomId
+    , room : Maybe Room
     , gameModel : GameModel
     , gameWidgetState : Widget.Model
     , roomIdInputText : String
@@ -60,6 +61,10 @@ type alias FrontendModel =
 
 
 type alias Room =
+    { id : RoomId, content : RoomContent }
+
+
+type alias RoomContent =
     { gameModel : GameModel
     , clients : Set ClientId
     }
@@ -70,7 +75,7 @@ type alias RoomId =
 
 
 type alias BackendModel =
-    { rooms : Dict RoomId Room
+    { rooms : Dict RoomId RoomContent
     }
 
 
@@ -96,4 +101,4 @@ type BackendMsg
 
 type ToFrontend
     = UpdateGameModel GameModel
-    | JoinedRoom RoomId Room
+    | JoinedRoom Room

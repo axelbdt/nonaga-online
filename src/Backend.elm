@@ -50,11 +50,11 @@ updateFromFrontend sessionId clientId msg model =
 
         JoinOrCreateRoom roomId ->
             let
-                ( joinedRoom, rooms ) =
+                ( joinedRoomContent, rooms ) =
                     joinOrCreateRoom clientId roomId model.rooms
             in
             ( { model | rooms = rooms }
-            , sendToFrontend clientId (JoinedRoom roomId joinedRoom)
+            , sendToFrontend clientId (JoinedRoom { id = roomId, content = joinedRoomContent })
             )
 
 
