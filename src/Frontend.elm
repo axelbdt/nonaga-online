@@ -1,5 +1,6 @@
 module Frontend exposing (..)
 
+import Backend
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Components
@@ -10,6 +11,7 @@ import Lamdera exposing (sendToBackend)
 import Nonaga as Game
 import Types exposing (..)
 import Url
+import Url.Parser as Parser
 
 
 type alias Model =
@@ -33,15 +35,32 @@ init url key =
     let
         ( gameWidgetState, gameWidgetCommand ) =
             GraphicWidget.init 3000 1000 "gameWidget"
+
+        maybeRoomId =
+            parseRoomId url
     in
     ( { key = key
       , room = Nothing
       , gameModel = Game.initialModel
       , gameWidgetState = gameWidgetState
       , roomIdInputText = ""
+      , backendModel = Backend.initialModel
       }
-    , Cmd.map GameWidgetMsg gameWidgetCommand
+    , Cmd.batch
+        [ Cmd.map GameWidgetMsg gameWidgetCommand
+        , case maybeRoomId of
+            Nothing ->
+                Cmd.none
+
+            Just roomId ->
+                sendToBackend (JoinOrCreateRoom roomId)
+        ]
     )
+
+
+parseRoomId : Url.Url -> Maybe RoomId
+parseRoomId url =
+    Parser.parse Parser.string url
 
 
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
@@ -51,7 +70,10 @@ update msg model =
             case urlRequest of
                 Internal url ->
                     ( model
-                    , Nav.pushUrl model.key (Url.toString url)
+                    , Cmd.batch
+                        [ Nav.pushUrl model.key (Url.toString url)
+                        , sendToBackend (JoinOrCreateRoom url.path)
+                        ]
                     )
 
                 External url ->
@@ -60,7 +82,9 @@ update msg model =
                     )
 
         UrlChanged url ->
-            ( model, Cmd.none )
+            ( model
+            , Cmd.none
+            )
 
         NoOpFrontendMsg ->
             ( model, Cmd.none )
@@ -93,7 +117,10 @@ updateFromBackend msg model =
             ( { model | gameModel = gameModel }, Cmd.none )
 
         JoinedRoom room ->
-            ( { model | room = Just room }, Cmd.none )
+            ( { model | room = Just room }, Nav.pushUrl model.key room.id )
+
+        UpdateBackendModel backendModel ->
+            ( { model | backendModel = backendModel }, Cmd.none )
 
 
 view : Model -> Browser.Document FrontendMsg
@@ -103,7 +130,10 @@ view model =
         [ Element.layout []
             (case model.room of
                 Nothing ->
-                    Components.joinRoomForm SubmitRoomId model.roomIdInputText
+                    Element.column []
+                        [ Element.text (Debug.toString model.backendModel)
+                        , Components.joinRoomForm SubmitRoomId model.roomIdInputText
+                        ]
 
                 Just room ->
                     Element.text room.id

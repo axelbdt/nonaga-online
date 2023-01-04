@@ -57,6 +57,7 @@ type alias FrontendModel =
     , gameModel : GameModel
     , gameWidgetState : Widget.Model
     , roomIdInputText : String
+    , backendModel : BackendModel
     }
 
 
@@ -65,8 +66,9 @@ type alias Room =
 
 
 type alias RoomContent =
-    { gameModel : GameModel
-    , clients : Set ClientId
+    { clients : Set ClientId
+
+    -- , gameModel : GameModel
     }
 
 
@@ -102,3 +104,4 @@ type BackendMsg
 type ToFrontend
     = UpdateGameModel GameModel
     | JoinedRoom Room
+    | UpdateBackendModel BackendModel

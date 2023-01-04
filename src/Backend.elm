@@ -25,9 +25,13 @@ subscriptions model =
     Sub.batch [ onConnect ClientConnected, onDisconnect ClientDisconnected ]
 
 
+initialModel =
+    { rooms = Dict.empty }
+
+
 init : ( Model, Cmd BackendMsg )
 init =
-    ( { rooms = Dict.empty }
+    ( initialModel
     , Cmd.none
     )
 
@@ -52,10 +56,20 @@ updateFromFrontend sessionId clientId msg model =
             let
                 ( joinedRoomContent, rooms ) =
                     joinOrCreateRoom clientId roomId model.rooms
+
+                newModel =
+                    { model | rooms = rooms }
             in
-            ( { model | rooms = rooms }
-            , sendToFrontend clientId (JoinedRoom { id = roomId, content = joinedRoomContent })
+            ( newModel
+            , Cmd.batch
+                [ sendToFrontend clientId (JoinedRoom { id = roomId, content = joinedRoomContent })
+                , broadcastBackendModel newModel
+                ]
             )
+
+
+broadcastBackendModel backendModel =
+    Lamdera.broadcast (UpdateBackendModel backendModel)
 
 
 joinOrCreateRoom clientId roomId rooms =
@@ -63,7 +77,10 @@ joinOrCreateRoom clientId roomId rooms =
         Nothing ->
             let
                 newRoom =
-                    { clients = Set.singleton clientId, gameModel = Game.initialModel }
+                    { clients = Set.singleton clientId
+
+                    -- , gameModel = Game.initialModel
+                    }
 
                 updatedRooms =
                     Dict.insert roomId newRoom rooms
