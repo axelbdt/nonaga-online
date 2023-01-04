@@ -2,7 +2,6 @@ module Backend exposing (..)
 
 -- import Nonaga as Game
 
-import Dict
 import Lamdera exposing (ClientId, SessionId, onConnect, onDisconnect, sendToFrontend)
 import Rooms
 import Set
@@ -27,8 +26,9 @@ subscriptions model =
     Sub.batch [ onConnect ClientConnected, onDisconnect ClientDisconnected ]
 
 
+initialModel : BackendModel
 initialModel =
-    { rooms = Rooms.empty }
+    { clientRooms = Rooms.emptyClientRooms }
 
 
 init : ( Model, Cmd BackendMsg )
@@ -45,7 +45,21 @@ update msg model =
             ( model, Cmd.none )
 
         ClientDisconnected sessionId clientId ->
-            ( model, Cmd.none )
+            case Rooms.leave clientId model.clientRooms of
+                ( Nothing, newClientRooms ) ->
+                    ( model, Cmd.none )
+
+                ( Just roomId, newClientRooms ) ->
+                    let
+                        roomClients =
+                            Rooms.roomClients roomId newClientRooms
+
+                        newModel =
+                            { model | clientRooms = newClientRooms }
+                    in
+                    ( newModel
+                    , updateRoomClients roomClients
+                    )
 
 
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
@@ -56,19 +70,29 @@ updateFromFrontend sessionId clientId msg model =
 
         JoinOrCreateRoom roomId ->
             let
-                ( joinedRoomContent, rooms ) =
-                    Rooms.joinOrCreate clientId roomId model.rooms
+                newClientRooms =
+                    Rooms.joinOrCreate clientId roomId model.clientRooms
+
+                roomClients =
+                    Rooms.roomClients roomId newClientRooms
 
                 newModel =
-                    { model | rooms = rooms }
+                    { model | clientRooms = newClientRooms }
             in
             ( newModel
             , Cmd.batch
-                [ sendToFrontend clientId (JoinedRoom roomId)
-                , broadcastBackendModel newModel
+                [ sendToFrontend clientId (JoinedRoom roomId roomClients)
+                , updateRoomClients roomClients
                 ]
             )
 
 
-broadcastBackendModel backendModel =
-    Lamdera.broadcast (UpdateBackendModel backendModel)
+updateRoomClients roomClients =
+    broadcastToRoomClients roomClients (UpdateRoomClients roomClients)
+
+
+broadcastToRoomClients roomClients msg =
+    roomClients
+        |> Set.toList
+        |> List.map (\aClientId -> sendToFrontend aClientId msg)
+        |> Cmd.batch

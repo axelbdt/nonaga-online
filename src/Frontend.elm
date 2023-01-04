@@ -1,6 +1,5 @@
 module Frontend exposing (..)
 
-import Backend
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Components
@@ -41,11 +40,10 @@ init url key =
             parseRoomId url
     in
     ( { key = key
-      , roomId = Nothing
+      , room = Nothing
       , gameModel = Game.initialModel
       , gameWidgetState = gameWidgetState
       , roomIdInputText = ""
-      , backendModel = Backend.initialModel
       }
     , Cmd.batch
         [ Cmd.map GameWidgetMsg gameWidgetCommand
@@ -119,11 +117,22 @@ updateFromBackend msg model =
         UpdateGameModel gameModel ->
             ( { model | gameModel = gameModel }, Cmd.none )
 
-        JoinedRoom roomId ->
-            ( { model | roomId = Just roomId }, Nav.pushUrl model.key (RoomId.toString roomId) )
+        JoinedRoom roomId roomClients ->
+            ( { model | room = Just { id = roomId, clients = roomClients } }
+            , Nav.pushUrl model.key (RoomId.toString roomId)
+            )
 
-        UpdateBackendModel backendModel ->
-            ( { model | backendModel = backendModel }, Cmd.none )
+        UpdateRoomClients roomClients ->
+            case model.room of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just room ->
+                    let
+                        newRoom =
+                            { room | clients = roomClients }
+                    in
+                    ( { model | room = Just newRoom }, Cmd.none )
 
 
 view : Model -> Browser.Document FrontendMsg
@@ -131,15 +140,15 @@ view model =
     { title = ""
     , body =
         [ Element.layout []
-            (case model.roomId of
+            (case model.room of
                 Nothing ->
-                    Element.column []
-                        [ Element.text (Debug.toString model.backendModel)
-                        , Components.joinRoomForm SubmitRoomId model.roomIdInputText
-                        ]
+                    Components.joinRoomForm SubmitRoomId model.roomIdInputText
 
-                Just roomId ->
-                    Element.text (RoomId.toString roomId)
+                Just room ->
+                    Element.column []
+                        [ Element.text (RoomId.toString room.id)
+                        , Element.text (Debug.toString (Maybe.map .clients model.room))
+                        ]
              -- [ GraphicWidget.view model.gameWidgetState (Game.view model.gameModel) ]
             )
         ]
