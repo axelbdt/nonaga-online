@@ -3,12 +3,12 @@ module Frontend exposing (..)
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Components
-import Debug
 import Element exposing (..)
 import GraphicSVG.Widget as GraphicWidget
 import Lamdera exposing (sendToBackend)
 import Nonaga as Game
 import RoomId as RoomId
+import Rooms
 import Types exposing (..)
 import Url
 import Url.Parser as Parser
@@ -117,22 +117,13 @@ updateFromBackend msg model =
         UpdateGameModel gameModel ->
             ( { model | gameModel = gameModel }, Cmd.none )
 
-        JoinedRoom roomId roomClients ->
-            ( { model | room = Just { id = roomId, clients = roomClients } }
+        JoinedRoom roomId roomState ->
+            ( { model | room = Just { id = roomId, state = roomState } }
             , Nav.pushUrl model.key (RoomId.toString roomId)
             )
 
         UpdateRoomClients roomClients ->
-            case model.room of
-                Nothing ->
-                    ( model, Cmd.none )
-
-                Just room ->
-                    let
-                        newRoom =
-                            { room | clients = roomClients }
-                    in
-                    ( { model | room = Just newRoom }, Cmd.none )
+            ( model, Cmd.none )
 
 
 view : Model -> Browser.Document FrontendMsg
@@ -145,10 +136,16 @@ view model =
                     Components.joinRoomForm SubmitRoomId model.roomIdInputText
 
                 Just room ->
-                    Element.column []
-                        [ Element.text (RoomId.toString room.id)
-                        , Element.text (Debug.toString (Maybe.map .clients model.room))
-                        ]
+                    let
+                        message =
+                            case room.state of
+                                Rooms.WaitingForPlayers ->
+                                    "Waiting for players"
+
+                                Rooms.Playing ->
+                                    "Playing"
+                    in
+                    Element.text message
              -- [ GraphicWidget.view model.gameWidgetState (Game.view model.gameModel) ]
             )
         ]

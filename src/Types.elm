@@ -2,6 +2,7 @@ module Types exposing (..)
 
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
+import ClientRooms
 import Dict exposing (Dict)
 import Element exposing (..)
 import GraphicSVG.Widget as Widget
@@ -55,7 +56,7 @@ type GameMsg
 
 type alias FrontendModel =
     { key : Key
-    , room : Maybe { id : RoomId, clients : Set ClientId }
+    , room : Maybe { id : RoomId, state : RoomState }
     , gameModel : GameModel
     , gameWidgetState : Widget.Model
     , roomIdInputText : String
@@ -66,24 +67,25 @@ type alias Rooms =
     Rooms.Rooms
 
 
-type alias RoomContent =
-    Rooms.RoomContent
-
-
 type alias RoomId =
     RoomId.RoomId
 
 
-type alias ClientRooms =
-    Rooms.ClientRooms
-
-
 type alias RoomClients =
-    Rooms.RoomClients
+    ClientRooms.RoomClients
+
+
+type alias ClientRooms =
+    ClientRooms.ClientRooms
+
+
+type alias RoomState =
+    Rooms.RoomState
 
 
 type alias BackendModel =
     { clientRooms : ClientRooms
+    , rooms : Rooms
     }
 
 
@@ -109,5 +111,5 @@ type BackendMsg
 
 type ToFrontend
     = UpdateGameModel GameModel
-    | JoinedRoom RoomId RoomClients
+    | JoinedRoom RoomId RoomState
     | UpdateRoomClients RoomClients

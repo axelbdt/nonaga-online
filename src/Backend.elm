@@ -2,6 +2,7 @@ module Backend exposing (..)
 
 -- import Nonaga as Game
 
+import ClientRooms
 import Lamdera exposing (ClientId, SessionId, onConnect, onDisconnect, sendToFrontend)
 import Rooms
 import Set
@@ -28,7 +29,9 @@ subscriptions model =
 
 initialModel : BackendModel
 initialModel =
-    { clientRooms = Rooms.emptyClientRooms }
+    { clientRooms = ClientRooms.emptyClientRooms
+    , rooms = Rooms.empty
+    }
 
 
 init : ( Model, Cmd BackendMsg )
@@ -45,17 +48,17 @@ update msg model =
             ( model, Cmd.none )
 
         ClientDisconnected sessionId clientId ->
-            case Rooms.get clientId model.clientRooms of
+            case ClientRooms.getClientRoomId clientId model.clientRooms of
                 Nothing ->
                     ( model, Cmd.none )
 
                 Just roomId ->
                     let
                         newClientRooms =
-                            Rooms.leave clientId model.clientRooms
+                            ClientRooms.leave clientId model.clientRooms
 
                         roomClients =
-                            Rooms.roomClients roomId newClientRooms
+                            ClientRooms.roomClients roomId newClientRooms
 
                         newModel =
                             { model | clientRooms = newClientRooms }
@@ -74,17 +77,32 @@ updateFromFrontend sessionId clientId msg model =
         JoinOrCreateRoom roomId ->
             let
                 newClientRooms =
-                    Rooms.joinOrCreate clientId roomId model.clientRooms
+                    ClientRooms.joinOrCreate clientId roomId model.clientRooms
 
                 roomClients =
-                    Rooms.roomClients roomId newClientRooms
+                    ClientRooms.roomClients roomId newClientRooms
+
+                roomState =
+                    case Rooms.getState roomId model.rooms of
+                        Rooms.WaitingForPlayers ->
+                            if Set.size roomClients > 1 then
+                                Rooms.Playing
+
+                            else
+                                Rooms.WaitingForPlayers
+
+                        Rooms.Playing ->
+                            Rooms.Playing
+
+                rooms =
+                    Rooms.updateState roomId roomState
 
                 newModel =
                     { model | clientRooms = newClientRooms }
             in
             ( newModel
             , Cmd.batch
-                [ sendToFrontend clientId (JoinedRoom roomId roomClients)
+                [ sendToFrontend clientId (JoinedRoom roomId roomState)
                 , updateRoomClients roomClients
                 ]
             )
