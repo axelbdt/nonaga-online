@@ -45,9 +45,9 @@ empty =
     Rooms Dict.empty
 
 
-get : RoomId -> Rooms -> Maybe RoomContent
-get roomId (Rooms roomsDict) =
-    Dict.get (RoomId.toString roomId) roomsDict
+get : ClientId -> ClientRooms -> Maybe RoomId
+get clientId clientRooms =
+    Dict.get clientId clientRooms
 
 
 findClient : ClientId -> Rooms -> Maybe RoomId
@@ -65,9 +65,9 @@ joinOrCreate clientId roomId clientRooms =
     Dict.insert clientId roomId clientRooms
 
 
-leave : ClientId -> ClientRooms -> ( Maybe RoomId, ClientRooms )
+leave : ClientId -> ClientRooms -> ClientRooms
 leave clientId clientRooms =
-    ( Dict.get clientId clientRooms, Dict.remove clientId clientRooms )
+    Dict.remove clientId clientRooms
 
 
 removeClient : ClientId -> RoomContent -> ( RoomContent, Bool )

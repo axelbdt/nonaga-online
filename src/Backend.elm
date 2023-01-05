@@ -45,12 +45,15 @@ update msg model =
             ( model, Cmd.none )
 
         ClientDisconnected sessionId clientId ->
-            case Rooms.leave clientId model.clientRooms of
-                ( Nothing, newClientRooms ) ->
+            case Rooms.get clientId model.clientRooms of
+                Nothing ->
                     ( model, Cmd.none )
 
-                ( Just roomId, newClientRooms ) ->
+                Just roomId ->
                     let
+                        newClientRooms =
+                            Rooms.leave clientId model.clientRooms
+
                         roomClients =
                             Rooms.roomClients roomId newClientRooms
 
