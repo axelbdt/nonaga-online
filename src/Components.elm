@@ -1,9 +1,9 @@
 module Components exposing (joinRoomForm)
 
 import Element exposing (..)
+import Element.Font as Font
 import Element.Input as Input
 import Html
-import Html.Attributes as Attr
 import Html.Events
 import Material.Icons exposing (login)
 import Material.Icons.Types exposing (Coloring(..))
@@ -18,7 +18,7 @@ palette =
     Material.defaultPalette
 
 
-joinRoomForm onSubmit roomId =
+joinRoomForm onSubmit roomId roomFull =
     let
         joinRoomButton =
             W.button
@@ -38,6 +38,17 @@ joinRoomForm onSubmit roomId =
 
         loginIcon =
             Material.Icons.login |> Widget.Icon.elmMaterialIcons Color
+
+        errorMessage =
+            Element.el [ Font.size 12, Element.centerX ]
+                (Element.text
+                    (if roomFull then
+                        "This room is full, please enter another."
+
+                     else
+                        " "
+                    )
+                )
     in
     Element.el [ Element.centerX ]
         (Element.html
@@ -45,8 +56,9 @@ joinRoomForm onSubmit roomId =
                 [ Html.Events.onSubmit onSubmit ]
                 [ Element.layout []
                     (Element.column
-                        [ Element.padding 50, Element.spacing 10 ]
-                        [ roomIdInput
+                        [ Element.padding 50, Element.spacing 12 ]
+                        [ errorMessage
+                        , roomIdInput
                         , joinRoomButton
                         ]
                     )

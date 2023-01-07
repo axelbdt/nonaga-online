@@ -3,10 +3,50 @@ module Nonaga exposing (..)
 import Dict exposing (Dict)
 import GraphicSVG as G
 import Set exposing (Set)
-import Types exposing (..)
 
 
-initialModel : GameModel
+type Player
+    = Red
+    | Black
+
+
+type TurnPhase
+    = MoveToken
+    | MovePlatform
+
+
+type alias Platform =
+    ( Int, Int )
+
+
+type alias Board =
+    Set Platform
+
+
+type alias Tokens =
+    Dict Platform Player
+
+
+type alias Model =
+    { currentPlayer : Player
+    , turnPhase : TurnPhase
+    , board : Board
+    , tokens : Tokens
+    , lastMovedPlatform : Platform
+    , selectedToken : Maybe Platform
+    , selectedPlatform : Maybe Platform
+    }
+
+
+type Msg
+    = SelectToken Player Platform
+    | ChooseTokenDestination Platform Platform
+    | SelectPlatform Platform
+    | ChoosePlatformDestination Platform Platform
+    | Reset
+
+
+initialModel : Model
 initialModel =
     { currentPlayer = Red
     , turnPhase = MoveToken
@@ -63,6 +103,19 @@ nextPlayer player =
 
         Black ->
             Red
+
+
+playerEquals : Player -> Player -> Bool
+playerEquals player1 player2 =
+    case ( player1, player2 ) of
+        ( Red, Red ) ->
+            True
+
+        ( Black, Black ) ->
+            True
+
+        _ ->
+            False
 
 
 directions : Set ( Int, Int )
@@ -174,7 +227,7 @@ tokenIsWinner tokens token =
         |> (==) 2
 
 
-update : GameMsg -> GameModel -> GameModel
+update : Msg -> Model -> Model
 update msg model =
     case msg of
         SelectToken player token ->
@@ -233,7 +286,7 @@ update msg model =
             initialModel
 
 
-view : GameModel -> List (G.Shape FrontendMsg)
+view : Model -> List (G.Shape Msg)
 view model =
     [ boardView model.board model.selectedPlatform
     , G.group
@@ -267,7 +320,7 @@ view model =
     ]
 
 
-placeShape : ( Int, Int ) -> G.Shape FrontendMsg -> G.Shape FrontendMsg
+placeShape : ( Int, Int ) -> G.Shape Msg -> G.Shape Msg
 placeShape ( x, y ) shape =
     shape
         |> G.move ( 100 * (toFloat x + cos (pi / 3) * toFloat y), 100 * sin (pi / 3) * toFloat y )
@@ -282,13 +335,13 @@ platformColor selected =
         G.yellow
 
 
-platformShape : Bool -> G.Shape FrontendMsg
+platformShape : Bool -> G.Shape Msg
 platformShape selected =
     G.circle 50
         |> G.filled (platformColor selected)
 
 
-platformView : Maybe Platform -> Platform -> G.Shape FrontendMsg
+platformView : Maybe Platform -> Platform -> G.Shape Msg
 platformView selectedPlatform platform =
     (case selectedPlatform of
         Nothing ->
@@ -298,22 +351,22 @@ platformView selectedPlatform platform =
             platformShape (selected == platform)
     )
         |> placeShape platform
-        |> G.notifyTap (GameMsg (SelectPlatform platform))
+        |> G.notifyTap (SelectPlatform platform)
 
 
-boardView : Board -> Maybe Platform -> G.Shape FrontendMsg
+boardView : Board -> Maybe Platform -> G.Shape Msg
 boardView board selectedPlatform =
     Set.toList board
         |> List.map (platformView selectedPlatform)
         |> G.group
 
 
-platformDestinationView : Platform -> Platform -> G.Shape FrontendMsg
+platformDestinationView : Platform -> Platform -> G.Shape Msg
 platformDestinationView from to =
     platformShape False
         |> placeShape to
         |> G.makeTransparent 0.6
-        |> G.notifyTap (GameMsg (ChoosePlatformDestination from to))
+        |> G.notifyTap (ChoosePlatformDestination from to)
 
 
 tokenColor : Player -> Bool -> G.Color
@@ -334,12 +387,12 @@ tokenColor player selected =
                 G.darkCharcoal
 
 
-tokenShape : Player -> Bool -> G.Shape FrontendMsg
+tokenShape : Player -> Bool -> G.Shape Msg
 tokenShape player selected =
     G.circle 40 |> G.filled (tokenColor player selected)
 
 
-tokenView : Maybe Platform -> Platform -> Player -> G.Shape FrontendMsg
+tokenView : Maybe Platform -> Platform -> Player -> G.Shape Msg
 tokenView selectedToken platform player =
     (case selectedToken of
         Nothing ->
@@ -349,25 +402,25 @@ tokenView selectedToken platform player =
             tokenShape player (selected == platform)
     )
         |> placeShape platform
-        |> G.notifyTap (GameMsg (SelectToken player platform))
+        |> G.notifyTap (SelectToken player platform)
 
 
-tokensView : Maybe Platform -> Tokens -> G.Shape FrontendMsg
+tokensView : Maybe Platform -> Tokens -> G.Shape Msg
 tokensView selectedToken tokens =
     Dict.map (tokenView selectedToken) tokens
         |> Dict.values
         |> G.group
 
 
-tokenDestinationView : Player -> Platform -> Platform -> G.Shape FrontendMsg
+tokenDestinationView : Player -> Platform -> Platform -> G.Shape Msg
 tokenDestinationView player from to =
     tokenShape player False
         |> placeShape to
         |> G.makeTransparent 0.6
-        |> G.notifyTap (GameMsg (ChooseTokenDestination from to))
+        |> G.notifyTap (ChooseTokenDestination from to)
 
 
-winnerView : Player -> G.Shape FrontendMsg
+winnerView : Player -> G.Shape Msg
 winnerView player =
     G.group
         [ G.roundedRect 240 120 5 |> G.filled G.white
@@ -377,7 +430,7 @@ winnerView player =
             , G.text "Retry" |> G.centered |> G.size 24 |> G.filled G.white |> G.move ( 0, -8 )
             ]
             |> G.move ( 0, -24 )
-            |> G.notifyTap (GameMsg Reset)
+            |> G.notifyTap Reset
         ]
 
 

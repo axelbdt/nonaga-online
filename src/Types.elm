@@ -2,64 +2,24 @@ module Types exposing (..)
 
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
-import ClientRooms
 import Dict exposing (Dict)
 import Element exposing (..)
 import GraphicSVG.Widget as Widget
 import Lamdera exposing (ClientId, SessionId)
+import Nonaga as Game
 import RoomId
 import Rooms
 import Set exposing (Set)
 import Url exposing (Url)
 
 
-type Player
-    = Red
-    | Black
-
-
-type TurnPhase
-    = MoveToken
-    | MovePlatform
-
-
-type alias Platform =
-    ( Int, Int )
-
-
-type alias Board =
-    Set Platform
-
-
-type alias Tokens =
-    Dict Platform Player
-
-
-type alias GameModel =
-    { currentPlayer : Player
-    , turnPhase : TurnPhase
-    , board : Board
-    , tokens : Tokens
-    , lastMovedPlatform : Platform
-    , selectedToken : Maybe Platform
-    , selectedPlatform : Maybe Platform
-    }
-
-
-type GameMsg
-    = SelectToken Player Platform
-    | ChooseTokenDestination Platform Platform
-    | SelectPlatform Platform
-    | ChoosePlatformDestination Platform Platform
-    | Reset
-
-
 type alias FrontendModel =
     { key : Key
-    , room : Maybe { id : RoomId, state : RoomState }
-    , gameModel : GameModel
+    , room : Maybe { id : RoomId, state : FrontendRoomState }
+    , gameModel : Game.Model
     , gameWidgetState : Widget.Model
     , roomIdInputText : String
+    , roomFull : Bool
     }
 
 
@@ -71,21 +31,28 @@ type alias RoomId =
     RoomId.RoomId
 
 
-type alias RoomClients =
-    ClientRooms.RoomClients
+type alias WaitingClients =
+    Rooms.WaitingClients
 
 
-type alias ClientRooms =
-    ClientRooms.ClientRooms
+type alias BackendRoom =
+    Rooms.BackendRoom
 
 
-type alias RoomState =
-    Rooms.RoomState
+type alias BackendRoomState =
+    Rooms.BackendRoomState
+
+
+type alias FrontendRoom =
+    Rooms.FrontendRoom
+
+
+type alias FrontendRoomState =
+    Rooms.FrontendRoomState
 
 
 type alias BackendModel =
-    { clientRooms : ClientRooms
-    , rooms : Rooms
+    { rooms : Rooms
     }
 
 
@@ -94,13 +61,13 @@ type FrontendMsg
     | UrlChanged Url
     | NoOpFrontendMsg
     | GameWidgetMsg Widget.Msg
-    | GameMsg GameMsg
+    | GameMsg Game.Msg
     | SubmitRoomId
     | SetRoomIdInputText String
 
 
 type ToBackend
-    = ForwardGameMsg GameMsg
+    = ForwardGameMsg Game.Msg
     | JoinOrCreateRoom RoomId
 
 
@@ -110,6 +77,7 @@ type BackendMsg
 
 
 type ToFrontend
-    = UpdateGameModel GameModel
-    | JoinedRoom RoomId RoomState
-    | UpdateRoomClients RoomClients
+    = UpdateGameModel Game.Model
+    | JoinedRoom FrontendRoom
+    | UpdateRoom FrontendRoom
+    | RoomFull

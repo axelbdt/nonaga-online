@@ -44,6 +44,7 @@ init url key =
       , gameModel = Game.initialModel
       , gameWidgetState = gameWidgetState
       , roomIdInputText = ""
+      , roomFull = False
       }
     , Cmd.batch
         [ Cmd.map GameWidgetMsg gameWidgetCommand
@@ -100,7 +101,7 @@ update msg model =
             ( { model | gameWidgetState = newWidgetState }, Cmd.map GameWidgetMsg widgetCommand )
 
         SetRoomIdInputText inputText ->
-            ( { model | roomIdInputText = inputText }
+            ( { model | roomIdInputText = inputText, roomFull = False }
             , Cmd.none
             )
 
@@ -117,13 +118,20 @@ updateFromBackend msg model =
         UpdateGameModel gameModel ->
             ( { model | gameModel = gameModel }, Cmd.none )
 
-        JoinedRoom roomId roomState ->
-            ( { model | room = Just { id = roomId, state = roomState } }
-            , Nav.pushUrl model.key (RoomId.toString roomId)
+        JoinedRoom room ->
+            ( { model | room = Just room }
+            , Nav.pushUrl model.key (RoomId.toString room.id)
             )
 
-        UpdateRoomClients roomClients ->
-            ( model, Cmd.none )
+        UpdateRoom room ->
+            let
+                newModel =
+                    { model | room = Just room }
+            in
+            ( newModel, Cmd.none )
+
+        RoomFull ->
+            ( { model | roomFull = True }, Cmd.none )
 
 
 view : Model -> Browser.Document FrontendMsg
@@ -133,16 +141,16 @@ view model =
         [ Element.layout []
             (case model.room of
                 Nothing ->
-                    Components.joinRoomForm SubmitRoomId model.roomIdInputText
+                    Components.joinRoomForm SubmitRoomId model.roomIdInputText model.roomFull
 
                 Just room ->
                     let
                         message =
                             case room.state of
-                                Rooms.WaitingForPlayers ->
+                                Rooms.FrontWaitingForPlayers ->
                                     "Waiting for players"
 
-                                Rooms.Playing ->
+                                Rooms.FrontPlaying ->
                                     "Playing"
                     in
                     Element.text message
