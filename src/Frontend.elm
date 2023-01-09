@@ -25,7 +25,7 @@ app =
         , onUrlChange = UrlChanged
         , update = update
         , updateFromBackend = updateFromBackend
-        , subscriptions = \_ -> Sub.map GameWidgetMsg GraphicWidget.subscriptions
+        , subscriptions = \_ -> Sub.none -- \_ -> Sub.map GameWidgetMsg GraphicWidget.subscriptions
         , view = view
         }
 
@@ -47,7 +47,7 @@ init url key =
       , roomFull = False
       }
     , Cmd.batch
-        [ Cmd.map GameWidgetMsg gameWidgetCommand
+        [ Cmd.none -- Cmd.map GameWidgetMsg gameWidgetCommand
         , case maybeRoomId of
             Nothing ->
                 Cmd.none
@@ -126,7 +126,7 @@ updateFromBackend msg model =
         UpdateRoom room ->
             let
                 newModel =
-                    { model | room = Just room }
+                    { model | room = Just (Debug.log "room update" room) }
             in
             ( newModel, Cmd.none )
 
@@ -147,10 +147,10 @@ view model =
                     let
                         message =
                             case room.state of
-                                Rooms.FrontWaitingForPlayers ->
+                                Rooms.FrontWaitingForPlayers _ ->
                                     "Waiting for players"
 
-                                Rooms.FrontPlaying ->
+                                Rooms.FrontPlaying _ ->
                                     "Playing"
                     in
                     Element.text message

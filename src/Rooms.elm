@@ -29,8 +29,8 @@ type BackendRoomState
 
 
 type FrontendRoomState
-    = FrontWaitingForPlayers
-    | FrontPlaying
+    = FrontWaitingForPlayers WaitingClients
+    | FrontPlaying PlayingClients
 
 
 type Rooms
@@ -56,6 +56,11 @@ getClients roomState =
                 |> Set.fromList
 
 
+updateState : BackendRoom -> BackendRoomState -> BackendRoom
+updateState room newState =
+    { room | state = newState }
+
+
 clientInRoom : ClientId -> BackendRoomState -> Bool
 clientInRoom clientId roomState =
     case roomState of
@@ -68,11 +73,11 @@ clientInRoom clientId roomState =
 
 toFrontendRoomState roomState =
     case roomState of
-        WaitingForPlayers _ ->
-            FrontWaitingForPlayers
+        WaitingForPlayers clients ->
+            FrontWaitingForPlayers clients
 
-        Playing _ ->
-            FrontPlaying
+        Playing clients ->
+            FrontPlaying clients
 
 
 toFrontendRoom room =
@@ -107,74 +112,22 @@ findClientRoom clientId (Rooms roomsDict) =
         |> List.head
 
 
-joinOrCreate : ClientId -> RoomId -> Rooms -> Rooms
-joinOrCreate clientId roomId rooms =
-    let
-        room =
-            getWithDefault roomId rooms
 
-        newState =
-            case join clientId room of
-                Ok { state } ->
-                    state
-
-                Err _ ->
-                    room.state
-
-        newRoom =
-            { room | state = newState }
-    in
-    insert newRoom rooms
+{-
+   join : ClientId -> BackendRoom -> Result String BackendRoom
+   join clientId room =
+       Ok room
 
 
-join : ClientId -> BackendRoom -> Result BackendRoom BackendRoom
-join clientId room =
-    case room.state of
-        WaitingForPlayers clients ->
-            let
-                newClients =
-                    Set.insert clientId clients
-
-                newState =
-                    if Set.size newClients > 1 then
-                        Playing (assignPlayers newClients)
-
-                    else
-                        WaitingForPlayers newClients
-            in
-            Ok { room | state = newState }
-
-        Playing clients ->
-            let
-                newClients =
-                    assignPlayer clientId clients
-            in
-            Ok { room | state = Playing newClients }
+   assignPlayer : ClientId -> PlayingClients -> Result String PlayingClients
+   assignPlayer clientId clients =
+       Ok clients
 
 
-assignPlayer : ClientId -> PlayingClients -> PlayingClients
-assignPlayer clientId clients =
-    if Dict.size clients < 2 then
-        case
-            [ Red, Black ]
-                |> List.filter (\p -> List.any (Nonaga.playerEquals p) (Dict.values clients))
-                |> List.head
-        of
-            Nothing ->
-                clients
 
-            Just player ->
-                Dict.insert clientId player clients
-
-    else
-        clients
-
-
-assignPlayers : WaitingClients -> PlayingClients
-assignPlayers clients =
-    clients
-        |> Set.toList
-        |> List.foldl assignPlayer Dict.empty
+      assignPlayers : WaitingClients -> Result String PlayingClients
+      assignPlayers clients =
+-}
 
 
 leave : ClientId -> Rooms -> ( Maybe BackendRoom, Rooms )
