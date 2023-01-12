@@ -1,7 +1,6 @@
 module Rooms exposing (..)
 
 import Dict exposing (Dict)
-import Lamdera exposing (ClientId)
 import Nonaga exposing (Player(..))
 import RoomId exposing (RoomId)
 import Set exposing (Set)
@@ -11,26 +10,28 @@ type alias FrontendRoom =
     { id : RoomId, state : FrontendRoomState }
 
 
+type RoomClientState
+    = None
+    | Pending
+    | Inside UserId FrontendRoom
+
+
+type alias UserId =
+    String
+
+
 type alias BackendRoom =
     { id : RoomId, state : BackendRoomState }
 
 
-type alias WaitingClients =
-    Set ClientId
-
-
-type alias PlayingClients =
-    Dict ClientId Player
-
-
 type BackendRoomState
-    = WaitingForPlayers WaitingClients
-    | Playing PlayingClients
+    = WaitingForPlayers (Set UserId)
+    | Playing (Dict UserId Player)
 
 
 type FrontendRoomState
-    = FrontWaitingForPlayers WaitingClients
-    | FrontPlaying PlayingClients
+    = FrontWaitingForPlayers (Set UserId)
+    | FrontPlaying (Dict UserId Player)
 
 
 type Rooms
@@ -41,18 +42,31 @@ empty =
     Rooms Dict.empty
 
 
-emptyRoomClients =
+emptyRoomUsers =
     Set.empty
 
 
-getClients : BackendRoomState -> WaitingClients
-getClients roomState =
-    case roomState of
-        WaitingForPlayers clients ->
-            clients
+getUserId : RoomClientState -> Maybe UserId
+getUserId clientState =
+    case clientState of
+        None ->
+            Nothing
 
-        Playing clients ->
-            Dict.keys clients
+        Pending ->
+            Nothing
+
+        Inside userId _ ->
+            Just userId
+
+
+getUsers : BackendRoomState -> Set UserId
+getUsers roomState =
+    case roomState of
+        WaitingForPlayers users ->
+            users
+
+        Playing users ->
+            Dict.keys users
                 |> Set.fromList
 
 
@@ -61,23 +75,23 @@ updateState room newState =
     { room | state = newState }
 
 
-clientInRoom : ClientId -> BackendRoomState -> Bool
-clientInRoom clientId roomState =
+userInRoom : UserId -> BackendRoomState -> Bool
+userInRoom userId roomState =
     case roomState of
-        WaitingForPlayers clients ->
-            Set.member clientId clients
+        WaitingForPlayers users ->
+            Set.member userId users
 
-        Playing clients ->
-            Dict.member clientId clients
+        Playing users ->
+            Dict.member userId users
 
 
 toFrontendRoomState roomState =
     case roomState of
-        WaitingForPlayers clients ->
-            FrontWaitingForPlayers clients
+        WaitingForPlayers users ->
+            FrontWaitingForPlayers users
 
-        Playing clients ->
-            FrontPlaying clients
+        Playing users ->
+            FrontPlaying users
 
 
 toFrontendRoom room =
@@ -93,7 +107,7 @@ getWithDefault : RoomId -> Rooms -> BackendRoom
 getWithDefault roomId rooms =
     case get roomId rooms of
         Nothing ->
-            { id = roomId, state = WaitingForPlayers emptyRoomClients }
+            { id = roomId, state = WaitingForPlayers emptyRoomUsers }
 
         Just room ->
             room
@@ -105,41 +119,23 @@ insert room (Rooms roomsDict) =
         |> Rooms
 
 
-findClientRoom : ClientId -> Rooms -> Maybe BackendRoom
-findClientRoom clientId (Rooms roomsDict) =
-    Dict.filter (\_ { state } -> clientInRoom clientId state) roomsDict
+findUserRoom : UserId -> Rooms -> Maybe BackendRoom
+findUserRoom userId (Rooms roomsDict) =
+    Dict.filter (\_ { state } -> userInRoom userId state) roomsDict
         |> Dict.values
         |> List.head
 
 
-
-{-
-   join : ClientId -> BackendRoom -> Result String BackendRoom
-   join clientId room =
-       Ok room
-
-
-   assignPlayer : ClientId -> PlayingClients -> Result String PlayingClients
-   assignPlayer clientId clients =
-       Ok clients
-
-
-
-      assignPlayers : WaitingClients -> Result String PlayingClients
-      assignPlayers clients =
--}
-
-
-leave : ClientId -> Rooms -> ( Maybe BackendRoom, Rooms )
-leave clientId rooms =
-    case findClientRoom clientId rooms of
+leave : UserId -> Rooms -> ( Maybe BackendRoom, Rooms )
+leave userId rooms =
+    case findUserRoom userId rooms of
         Nothing ->
             ( Nothing, rooms )
 
         Just room ->
             let
                 newState =
-                    removeFromState clientId room.state
+                    removeFromState userId room.state
 
                 newRoom =
                     { room | state = newState }
@@ -150,13 +146,13 @@ leave clientId rooms =
             ( Just newRoom, newRooms )
 
 
-removeFromState : ClientId -> BackendRoomState -> BackendRoomState
-removeFromState clientId roomState =
+removeFromState : UserId -> BackendRoomState -> BackendRoomState
+removeFromState userId roomState =
     case roomState of
-        WaitingForPlayers clients ->
-            Set.remove clientId clients
+        WaitingForPlayers users ->
+            Set.remove userId users
                 |> WaitingForPlayers
 
-        Playing clients ->
-            Dict.remove clientId clients
+        Playing users ->
+            Dict.remove userId users
                 |> Playing

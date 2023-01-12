@@ -30,7 +30,8 @@ subscriptions model =
 
 initialModel : BackendModel
 initialModel =
-    { rooms = Rooms.empty
+    { clients = Dict.empty
+    , rooms = Rooms.empty
     }
 
 
@@ -41,6 +42,17 @@ init =
     )
 
 
+getSessionData : SessionId -> Sessions -> Maybe SessionData
+getSessionData sessionId sessions =
+    Dict.get sessionId sessions
+
+
+retrieveUserId : SessionId -> Sessions -> Maybe UserId
+retrieveUserId sessionId sessions =
+    getSessionData sessionId sessions
+        |> Maybe.map .userId
+
+
 update : BackendMsg -> Model -> ( Model, Cmd BackendMsg )
 update msg model =
     case msg of
@@ -48,16 +60,7 @@ update msg model =
             ( model, Cmd.none )
 
         ClientDisconnected sessionId clientId ->
-            case
-                Rooms.leave clientId model.rooms
-            of
-                ( Nothing, _ ) ->
-                    ( model, Cmd.none )
-
-                ( Just newRoom, newRooms ) ->
-                    ( { model | rooms = newRooms }
-                    , updateClientsRoom newRoom
-                    )
+            ( model, Cmd.none )
 
 
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
@@ -66,19 +69,20 @@ updateFromFrontend sessionId clientId msg model =
         ForwardGameMsg gameMsg ->
             ( model, Cmd.none )
 
-        JoinOrCreateRoom roomId ->
+        JoinOrCreateRoom maybeUserId roomId ->
             let
-                assignPlayer aClientId assignedClients =
+                -- TODO fix user join room
+                assignPlayer aUserId assignedUsers =
                     case
                         [ Red, Black ]
-                            |> List.filter (\p -> not (List.any (Nonaga.playerEquals p) (Dict.values assignedClients)))
+                            |> List.filter (\p -> not (List.any (Nonaga.playerEquals p) (Dict.values assignedUsers)))
                             |> List.head
                     of
                         Nothing ->
-                            assignedClients
+                            assignedUsers
 
                         Just player ->
-                            Dict.insert aClientId player assignedClients
+                            Dict.insert aUserId player assignedUsers
 
                 startPlayingIfReady roomState =
                     case roomState of
@@ -101,12 +105,20 @@ updateFromFrontend sessionId clientId msg model =
                 roomToJoin =
                     Rooms.getWithDefault roomId model.rooms
 
+                userId =
+                    case maybeUserId of
+                        Nothing ->
+                            String.fromInt (7 + Dict.size model.clients)
+
+                        Just id ->
+                            id
+
                 newStateResult =
                     case roomToJoin.state of
                         Rooms.WaitingForPlayers clients ->
                             let
                                 newClients =
-                                    Set.insert clientId clients
+                                    Set.insert userId clients
                             in
                             Rooms.WaitingForPlayers newClients
                                 |> startPlayingIfReady
@@ -116,7 +128,7 @@ updateFromFrontend sessionId clientId msg model =
                             if Dict.size clients < 2 then
                                 let
                                     newClients =
-                                        assignPlayer clientId clients
+                                        assignPlayer userId clients
                                 in
                                 Ok (Rooms.Playing newClients)
 
@@ -126,54 +138,48 @@ updateFromFrontend sessionId clientId msg model =
                                         clients
                                 in
                                 Err (Rooms.Playing newClients)
+            in
+            case newStateResult of
+                Ok newState ->
+                    let
+                        newRoom =
+                            Rooms.updateState roomToJoin newState
 
-                newRoomResult =
-                    case newStateResult of
-                        Ok newState ->
-                            Ok (Rooms.updateState roomToJoin newState)
-
-                        Err newState ->
-                            Err (Rooms.updateState roomToJoin newState)
-
-                newRooms =
-                    case newRoomResult of
-                        Ok newRoom ->
+                        newRooms =
                             Rooms.insert newRoom model.rooms
 
-                        Err _ ->
-                            model.rooms
+                        newClients =
+                            Dict.insert userId clientId model.clients
+                    in
+                    ( { model | rooms = newRooms, clients = newClients }
+                    , Cmd.batch
+                        [ sendToFrontend clientId
+                            (JoinedRoom userId (Rooms.toFrontendRoom newRoom))
+                        , updateRoomClients
+                            newRoom
+                            newClients
+                        ]
+                    )
 
-                newModel =
-                    { model | rooms = newRooms }
-
-                command =
-                    case newRoomResult of
-                        Ok newRoom ->
-                            Cmd.batch
-                                [ sendToFrontend clientId
-                                    (JoinedRoom (Rooms.toFrontendRoom newRoom))
-                                , updateClientsRoom
-                                    newRoom
-                                ]
-
-                        Err _ ->
-                            sendToFrontend clientId RoomFull
-            in
-            ( newModel
-            , command
-            )
+                Err _ ->
+                    ( model
+                    , sendToFrontend clientId RoomFull
+                    )
 
 
-updateClientsRoom : BackendRoom -> Cmd BackendMsg
-updateClientsRoom room =
-    broadcastToRoomClients (Rooms.getClients room.state)
+updateRoomClients : BackendRoom -> Clients -> Cmd BackendMsg
+updateRoomClients room clients =
+    broadcastToRoom room
+        clients
         (UpdateRoom
             (Rooms.toFrontendRoom room)
         )
 
 
-broadcastToRoomClients roomClients msg =
-    roomClients
+broadcastToRoom : BackendRoom -> Clients -> ToFrontend -> Cmd BackendMsg
+broadcastToRoom room clients msg =
+    Rooms.getUsers room.state
         |> Set.toList
-        |> List.map (\aClientId -> sendToFrontend aClientId msg)
+        |> List.filterMap (\userId -> Dict.get userId clients)
+        |> List.map (\clientId -> sendToFrontend clientId msg)
         |> Cmd.batch

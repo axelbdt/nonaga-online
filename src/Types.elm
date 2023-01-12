@@ -15,12 +15,16 @@ import Url exposing (Url)
 
 type alias FrontendModel =
     { key : Key
-    , room : Maybe { id : RoomId, state : FrontendRoomState }
+    , room : RoomClientState
     , gameModel : Game.Model
     , gameWidgetState : Widget.Model
     , roomIdInputText : String
     , roomFull : Bool
     }
+
+
+type alias RoomClientState =
+    Rooms.RoomClientState
 
 
 type alias Rooms =
@@ -29,10 +33,6 @@ type alias Rooms =
 
 type alias RoomId =
     RoomId.RoomId
-
-
-type alias WaitingClients =
-    Rooms.WaitingClients
 
 
 type alias BackendRoom =
@@ -51,8 +51,25 @@ type alias FrontendRoomState =
     Rooms.FrontendRoomState
 
 
+type alias UserId =
+    Rooms.UserId
+
+
+type alias SessionData =
+    { sessionId : SessionId, userId : UserId }
+
+
+type alias Sessions =
+    Dict SessionId SessionData
+
+
+type alias Clients =
+    Dict UserId ClientId
+
+
 type alias BackendModel =
-    { rooms : Rooms
+    { clients : Clients
+    , rooms : Rooms
     }
 
 
@@ -68,7 +85,7 @@ type FrontendMsg
 
 type ToBackend
     = ForwardGameMsg Game.Msg
-    | JoinOrCreateRoom RoomId
+    | JoinOrCreateRoom (Maybe UserId) RoomId
 
 
 type BackendMsg
@@ -78,6 +95,6 @@ type BackendMsg
 
 type ToFrontend
     = UpdateGameModel Game.Model
-    | JoinedRoom FrontendRoom
+    | JoinedRoom UserId FrontendRoom
     | UpdateRoom FrontendRoom
     | RoomFull

@@ -8,7 +8,7 @@ import GraphicSVG.Widget as GraphicWidget
 import Lamdera exposing (sendToBackend)
 import Nonaga as Game
 import RoomId as RoomId
-import Rooms
+import Rooms exposing (RoomClientState(..))
 import Types exposing (..)
 import Url
 import Url.Parser as Parser
@@ -40,7 +40,7 @@ init url key =
             parseRoomId url
     in
     ( { key = key
-      , room = Nothing
+      , room = None
       , gameModel = Game.initialModel
       , gameWidgetState = gameWidgetState
       , roomIdInputText = ""
@@ -53,7 +53,7 @@ init url key =
                 Cmd.none
 
             Just roomId ->
-                sendToBackend (JoinOrCreateRoom roomId)
+                sendToBackend (JoinOrCreateRoom Nothing roomId)
         ]
     )
 
@@ -73,7 +73,10 @@ update msg model =
                     ( model
                     , Cmd.batch
                         [ Nav.pushUrl model.key (Url.toString url)
-                        , sendToBackend (JoinOrCreateRoom (RoomId.parse url.path))
+                        , sendToBackend
+                            (JoinOrCreateRoom (Rooms.getUserId model.room)
+                                (RoomId.parse url.path)
+                            )
                         ]
                     )
 
@@ -108,7 +111,7 @@ update msg model =
         SubmitRoomId ->
             ( model
             , sendToBackend
-                (JoinOrCreateRoom (RoomId.parse model.roomIdInputText))
+                (JoinOrCreateRoom (Rooms.getUserId model.room) (RoomId.parse model.roomIdInputText))
             )
 
 
@@ -118,17 +121,25 @@ updateFromBackend msg model =
         UpdateGameModel gameModel ->
             ( { model | gameModel = gameModel }, Cmd.none )
 
-        JoinedRoom room ->
-            ( { model | room = Just room }
+        JoinedRoom userId room ->
+            ( { model | room = Inside userId room }
             , Nav.pushUrl model.key (RoomId.toString room.id)
             )
 
         UpdateRoom room ->
-            let
-                newModel =
-                    { model | room = Just (Debug.log "room update" room) }
-            in
-            ( newModel, Cmd.none )
+            case model.room of
+                None ->
+                    ( model, Cmd.none )
+
+                Pending ->
+                    ( model, Cmd.none )
+
+                Inside userId _ ->
+                    let
+                        newModel =
+                            { model | room = Inside userId (Debug.log "room update" room) }
+                    in
+                    ( newModel, Cmd.none )
 
         RoomFull ->
             ( { model | roomFull = True }, Cmd.none )
@@ -140,18 +151,21 @@ view model =
     , body =
         [ Element.layout []
             (case model.room of
-                Nothing ->
+                None ->
                     Components.joinRoomForm SubmitRoomId model.roomIdInputText model.roomFull
 
-                Just room ->
+                Pending ->
+                    Element.text "Joining room..."
+
+                Inside userId room ->
                     let
                         message =
                             case room.state of
                                 Rooms.FrontWaitingForPlayers _ ->
-                                    "Waiting for players"
+                                    userId ++ ": Waiting for players"
 
                                 Rooms.FrontPlaying _ ->
-                                    "Playing"
+                                    userId ++ ": Playing"
                     in
                     Element.text message
              -- [ GraphicWidget.view model.gameWidgetState (Game.view model.gameModel) ]
