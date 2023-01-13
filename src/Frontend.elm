@@ -125,7 +125,7 @@ update msg model =
                         (JoinOrCreateRoom (getUserId model.state) (RoomId.parse roomIdInputText))
                     )
 
-                Inside _ _ ->
+                Inside _ ->
                     ( model, Cmd.none )
 
 
@@ -136,7 +136,7 @@ updateFromBackend msg model =
             ( model, Cmd.none )
 
         JoinedRoom userId room ->
-            ( { model | state = Inside userId room }
+            ( { model | state = Inside { userId = userId, room = room } }
             , Nav.pushUrl model.key (RoomId.toString room.id)
             )
 
@@ -145,10 +145,10 @@ updateFromBackend msg model =
                 RoomSelection _ ->
                     ( model, Cmd.none )
 
-                Inside userId _ ->
+                Inside { userId } ->
                     let
                         newModel =
-                            { model | state = Inside userId (Debug.log "room update" room) }
+                            { model | state = Inside { userId = userId, room = room } }
                     in
                     ( newModel, Cmd.none )
 
@@ -159,7 +159,7 @@ updateFromBackend msg model =
                         RoomSelection state ->
                             RoomSelection { state | roomFull = True }
 
-                        Inside _ _ ->
+                        Inside _ ->
                             model.state
             in
             ( { model | state = newState }, Cmd.none )
@@ -174,7 +174,7 @@ view model =
                 RoomSelection { roomIdInputText, roomFull } ->
                     Components.joinRoomForm SubmitRoomId roomIdInputText roomFull
 
-                Inside userId room ->
+                Inside { userId, room } ->
                     let
                         message =
                             case room.state of
@@ -202,5 +202,5 @@ getUserId clientState =
         RoomSelection _ ->
             Nothing
 
-        Inside userId _ ->
+        Inside { userId } ->
             Just userId

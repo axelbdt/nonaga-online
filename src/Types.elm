@@ -24,7 +24,7 @@ type alias FrontendModel =
 
 type ClientState
     = RoomSelection { roomIdInputText : String, roomFull : Bool }
-    | Inside UserId FrontendRoom
+    | Inside { userId : UserId, room : FrontendRoom }
 
 
 type alias Rooms =
