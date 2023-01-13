@@ -10,12 +10,6 @@ type alias FrontendRoom =
     { id : RoomId, state : FrontendRoomState }
 
 
-type RoomClientState
-    = None
-    | Pending
-    | Inside UserId FrontendRoom
-
-
 type alias UserId =
     String
 
@@ -46,22 +40,9 @@ emptyRoomUsers =
     Set.empty
 
 
-getUserId : RoomClientState -> Maybe UserId
-getUserId clientState =
-    case clientState of
-        None ->
-            Nothing
-
-        Pending ->
-            Nothing
-
-        Inside userId _ ->
-            Just userId
-
-
-getUsers : BackendRoomState -> Set UserId
-getUsers roomState =
-    case roomState of
+getUsers : BackendRoom -> Set UserId
+getUsers room =
+    case room.state of
         WaitingForPlayers users ->
             users
 
@@ -156,3 +137,65 @@ removeFromState userId roomState =
         Playing users ->
             Dict.remove userId users
                 |> Playing
+
+
+assignPlayer aUserId assignedUsers =
+    case
+        [ Red, Black ]
+            |> List.filter (\p -> not (List.any (Nonaga.playerEquals p) (Dict.values assignedUsers)))
+            |> List.head
+    of
+        Nothing ->
+            assignedUsers
+
+        Just player ->
+            Dict.insert aUserId player assignedUsers
+
+
+startPlayingIfReady roomState =
+    case roomState of
+        Playing _ ->
+            roomState
+
+        WaitingForPlayers clients ->
+            if Set.size clients == 2 then
+                let
+                    assignedClients =
+                        clients
+                            |> Set.toList
+                            |> List.foldl assignPlayer Dict.empty
+                in
+                Playing assignedClients
+
+            else
+                WaitingForPlayers clients
+
+
+join userId roomToJoin =
+    case roomToJoin.state of
+        WaitingForPlayers users ->
+            let
+                newUsers =
+                    Set.insert userId users
+
+                newState =
+                    WaitingForPlayers newUsers
+                        |> startPlayingIfReady
+            in
+            updateState roomToJoin newState
+                |> Ok
+
+        Playing users ->
+            if Dict.size users < 2 then
+                let
+                    newUsers =
+                        assignPlayer userId users
+
+                    newState =
+                        Playing newUsers
+                in
+                updateState roomToJoin newState
+                    |> Ok
+
+            else
+                Err roomToJoin

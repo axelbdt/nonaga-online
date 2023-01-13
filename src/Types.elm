@@ -15,16 +15,16 @@ import Url exposing (Url)
 
 type alias FrontendModel =
     { key : Key
-    , room : RoomClientState
-    , gameModel : Game.Model
-    , gameWidgetState : Widget.Model
-    , roomIdInputText : String
-    , roomFull : Bool
+    , state : ClientState
+
+    -- , gameModel : Game.Model
+    -- , gameWidgetState : Widget.Model
     }
 
 
-type alias RoomClientState =
-    Rooms.RoomClientState
+type ClientState
+    = RoomSelection { roomIdInputText : String, roomFull : Bool }
+    | Inside UserId FrontendRoom
 
 
 type alias Rooms =
@@ -77,8 +77,8 @@ type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
     | NoOpFrontendMsg
-    | GameWidgetMsg Widget.Msg
-    | GameMsg Game.Msg
+      -- | GameWidgetMsg Widget.Msg
+      -- | GameMsg Game.Msg
     | SubmitRoomId
     | SetRoomIdInputText String
 

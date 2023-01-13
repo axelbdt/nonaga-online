@@ -71,37 +71,6 @@ updateFromFrontend sessionId clientId msg model =
 
         JoinOrCreateRoom maybeUserId roomId ->
             let
-                -- TODO fix user join room
-                assignPlayer aUserId assignedUsers =
-                    case
-                        [ Red, Black ]
-                            |> List.filter (\p -> not (List.any (Nonaga.playerEquals p) (Dict.values assignedUsers)))
-                            |> List.head
-                    of
-                        Nothing ->
-                            assignedUsers
-
-                        Just player ->
-                            Dict.insert aUserId player assignedUsers
-
-                startPlayingIfReady roomState =
-                    case roomState of
-                        Rooms.Playing _ ->
-                            roomState
-
-                        Rooms.WaitingForPlayers clients ->
-                            if Set.size clients == 2 then
-                                let
-                                    assignedClients =
-                                        clients
-                                            |> Set.toList
-                                            |> List.foldl assignPlayer Dict.empty
-                                in
-                                Rooms.Playing assignedClients
-
-                            else
-                                Rooms.WaitingForPlayers clients
-
                 roomToJoin =
                     Rooms.getWithDefault roomId model.rooms
 
@@ -113,38 +82,12 @@ updateFromFrontend sessionId clientId msg model =
                         Just id ->
                             id
 
-                newStateResult =
-                    case roomToJoin.state of
-                        Rooms.WaitingForPlayers clients ->
-                            let
-                                newClients =
-                                    Set.insert userId clients
-                            in
-                            Rooms.WaitingForPlayers newClients
-                                |> startPlayingIfReady
-                                |> Ok
-
-                        Rooms.Playing clients ->
-                            if Dict.size clients < 2 then
-                                let
-                                    newClients =
-                                        assignPlayer userId clients
-                                in
-                                Ok (Rooms.Playing newClients)
-
-                            else
-                                let
-                                    newClients =
-                                        clients
-                                in
-                                Err (Rooms.Playing newClients)
+                newRoomResult =
+                    Rooms.join userId roomToJoin
             in
-            case newStateResult of
-                Ok newState ->
+            case newRoomResult of
+                Ok newRoom ->
                     let
-                        newRoom =
-                            Rooms.updateState roomToJoin newState
-
                         newRooms =
                             Rooms.insert newRoom model.rooms
 
@@ -178,7 +121,7 @@ updateRoomClients room clients =
 
 broadcastToRoom : BackendRoom -> Clients -> ToFrontend -> Cmd BackendMsg
 broadcastToRoom room clients msg =
-    Rooms.getUsers room.state
+    Rooms.getUsers room
         |> Set.toList
         |> List.filterMap (\userId -> Dict.get userId clients)
         |> List.map (\clientId -> sendToFrontend clientId msg)

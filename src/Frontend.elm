@@ -3,12 +3,13 @@ module Frontend exposing (..)
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Components
+import Dict
 import Element exposing (..)
 import GraphicSVG.Widget as GraphicWidget
 import Lamdera exposing (sendToBackend)
 import Nonaga as Game
 import RoomId as RoomId
-import Rooms exposing (RoomClientState(..))
+import Rooms
 import Types exposing (..)
 import Url
 import Url.Parser as Parser
@@ -40,11 +41,14 @@ init url key =
             parseRoomId url
     in
     ( { key = key
-      , room = None
-      , gameModel = Game.initialModel
-      , gameWidgetState = gameWidgetState
-      , roomIdInputText = ""
-      , roomFull = False
+      , state =
+            RoomSelection
+                { roomIdInputText = ""
+                , roomFull = False
+                }
+
+      -- , gameModel = Game.initialModel
+      -- , gameWidgetState = gameWidgetState
       }
     , Cmd.batch
         [ Cmd.none -- Cmd.map GameWidgetMsg gameWidgetCommand
@@ -74,7 +78,7 @@ update msg model =
                     , Cmd.batch
                         [ Nav.pushUrl model.key (Url.toString url)
                         , sendToBackend
-                            (JoinOrCreateRoom (Rooms.getUserId model.room)
+                            (JoinOrCreateRoom (getUserId model.state)
                                 (RoomId.parse url.path)
                             )
                         ]
@@ -93,56 +97,72 @@ update msg model =
         NoOpFrontendMsg ->
             ( model, Cmd.none )
 
-        GameMsg gameMsg ->
-            ( model, sendToBackend (ForwardGameMsg gameMsg) )
+        {-
+           GameMsg gameMsg ->
+               ( model, sendToBackend (ForwardGameMsg gameMsg) )
 
-        GameWidgetMsg gameWidgetMessage ->
-            let
-                ( newWidgetState, widgetCommand ) =
-                    GraphicWidget.update gameWidgetMessage model.gameWidgetState
-            in
-            ( { model | gameWidgetState = newWidgetState }, Cmd.map GameWidgetMsg widgetCommand )
-
+           GameWidgetMsg gameWidgetMessage ->
+               let
+                   ( newWidgetState, widgetCommand ) =
+                       GraphicWidget.update gameWidgetMessage model.gameWidgetState
+               in
+               ( { model | gameWidgetState = newWidgetState }, Cmd.map GameWidgetMsg widgetCommand )
+        -}
         SetRoomIdInputText inputText ->
-            ( { model | roomIdInputText = inputText, roomFull = False }
+            let
+                newState =
+                    RoomSelection { roomIdInputText = inputText, roomFull = False }
+            in
+            ( { model | state = newState }
             , Cmd.none
             )
 
         SubmitRoomId ->
-            ( model
-            , sendToBackend
-                (JoinOrCreateRoom (Rooms.getUserId model.room) (RoomId.parse model.roomIdInputText))
-            )
+            case model.state of
+                RoomSelection { roomIdInputText } ->
+                    ( model
+                    , sendToBackend
+                        (JoinOrCreateRoom (getUserId model.state) (RoomId.parse roomIdInputText))
+                    )
+
+                Inside _ _ ->
+                    ( model, Cmd.none )
 
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
     case msg of
         UpdateGameModel gameModel ->
-            ( { model | gameModel = gameModel }, Cmd.none )
+            ( model, Cmd.none )
 
         JoinedRoom userId room ->
-            ( { model | room = Inside userId room }
+            ( { model | state = Inside userId room }
             , Nav.pushUrl model.key (RoomId.toString room.id)
             )
 
         UpdateRoom room ->
-            case model.room of
-                None ->
-                    ( model, Cmd.none )
-
-                Pending ->
+            case model.state of
+                RoomSelection _ ->
                     ( model, Cmd.none )
 
                 Inside userId _ ->
                     let
                         newModel =
-                            { model | room = Inside userId (Debug.log "room update" room) }
+                            { model | state = Inside userId (Debug.log "room update" room) }
                     in
                     ( newModel, Cmd.none )
 
         RoomFull ->
-            ( { model | roomFull = True }, Cmd.none )
+            let
+                newState =
+                    case model.state of
+                        RoomSelection state ->
+                            RoomSelection { state | roomFull = True }
+
+                        Inside _ _ ->
+                            model.state
+            in
+            ( { model | state = newState }, Cmd.none )
 
 
 view : Model -> Browser.Document FrontendMsg
@@ -150,12 +170,9 @@ view model =
     { title = ""
     , body =
         [ Element.layout []
-            (case model.room of
-                None ->
-                    Components.joinRoomForm SubmitRoomId model.roomIdInputText model.roomFull
-
-                Pending ->
-                    Element.text "Joining room..."
+            (case model.state of
+                RoomSelection { roomIdInputText, roomFull } ->
+                    Components.joinRoomForm SubmitRoomId roomIdInputText roomFull
 
                 Inside userId room ->
                     let
@@ -164,11 +181,26 @@ view model =
                                 Rooms.FrontWaitingForPlayers _ ->
                                     userId ++ ": Waiting for players"
 
-                                Rooms.FrontPlaying _ ->
-                                    userId ++ ": Playing"
+                                Rooms.FrontPlaying users ->
+                                    case Dict.get userId users of
+                                        Nothing ->
+                                            "I can't find my user id in room players"
+
+                                        Just player ->
+                                            "Playing as " ++ Game.playerText player
                     in
                     Element.text message
              -- [ GraphicWidget.view model.gameWidgetState (Game.view model.gameModel) ]
             )
         ]
     }
+
+
+getUserId : ClientState -> Maybe UserId
+getUserId clientState =
+    case clientState of
+        RoomSelection _ ->
+            Nothing
+
+        Inside userId _ ->
+            Just userId
