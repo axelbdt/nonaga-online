@@ -24,7 +24,7 @@ type alias FrontendModel =
 
 type ClientState
     = RoomSelection { roomIdInputText : String, roomFull : Bool }
-    | Inside { userId : UserId, room : FrontendRoom }
+    | Inside FrontendRoom
 
 
 type alias Rooms =
@@ -95,6 +95,6 @@ type BackendMsg
 
 type ToFrontend
     = UpdateGameModel Game.Model
-    | JoinedRoom UserId FrontendRoom
+    | JoinedRoom FrontendRoom
     | UpdateRoom FrontendRoom
     | RoomFull

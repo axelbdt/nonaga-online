@@ -135,8 +135,8 @@ updateFromBackend msg model =
         UpdateGameModel gameModel ->
             ( model, Cmd.none )
 
-        JoinedRoom userId room ->
-            ( { model | state = Inside { userId = userId, room = room } }
+        JoinedRoom room ->
+            ( { model | state = Inside room }
             , Nav.pushUrl model.key (RoomId.toString room.id)
             )
 
@@ -148,7 +148,7 @@ updateFromBackend msg model =
                 Inside { userId } ->
                     let
                         newModel =
-                            { model | state = Inside { userId = userId, room = room } }
+                            { model | state = Inside room }
                     in
                     ( newModel, Cmd.none )
 
@@ -174,20 +174,15 @@ view model =
                 RoomSelection { roomIdInputText, roomFull } ->
                     Components.joinRoomForm SubmitRoomId roomIdInputText roomFull
 
-                Inside { userId, room } ->
+                Inside room ->
                     let
                         message =
                             case room.state of
                                 Rooms.FrontWaitingForPlayers _ ->
-                                    userId ++ ": Waiting for players"
+                                    room.userId ++ ": Waiting for players"
 
-                                Rooms.FrontPlaying users ->
-                                    case Dict.get userId users of
-                                        Nothing ->
-                                            "I can't find my user id in room players"
-
-                                        Just player ->
-                                            "Playing as " ++ Game.playerText player
+                                Rooms.FrontPlaying { player } ->
+                                    "Playing as " ++ Game.playerText player
                     in
                     Element.text message
              -- [ GraphicWidget.view model.gameWidgetState (Game.view model.gameModel) ]

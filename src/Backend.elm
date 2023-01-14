@@ -42,17 +42,6 @@ init =
     )
 
 
-getSessionData : SessionId -> Sessions -> Maybe SessionData
-getSessionData sessionId sessions =
-    Dict.get sessionId sessions
-
-
-retrieveUserId : SessionId -> Sessions -> Maybe UserId
-retrieveUserId sessionId sessions =
-    getSessionData sessionId sessions
-        |> Maybe.map .userId
-
-
 update : BackendMsg -> Model -> ( Model, Cmd BackendMsg )
 update msg model =
     case msg of
@@ -97,7 +86,9 @@ updateFromFrontend sessionId clientId msg model =
                     ( { model | rooms = newRooms, clients = newClients }
                     , Cmd.batch
                         [ sendToFrontend clientId
-                            (JoinedRoom userId (Rooms.toFrontendRoom newRoom))
+                            (JoinedRoom
+                                (Rooms.toFrontendRoom userId newRoom)
+                            )
                         , updateRoomClients
                             newRoom
                             newClients
@@ -112,11 +103,35 @@ updateFromFrontend sessionId clientId msg model =
 
 updateRoomClients : BackendRoom -> Clients -> Cmd BackendMsg
 updateRoomClients room clients =
-    broadcastToRoom room
-        clients
-        (UpdateRoom
-            (Rooms.toFrontendRoom room)
-        )
+    let
+        userList =
+            Rooms.getUsers room
+                |> Set.toList
+    in
+    userList
+        |> List.filterMap
+            (\userId ->
+                Dict.get userId clients
+                    |> Maybe.map (\clientId -> ( clientId, userId ))
+            )
+        |> List.map
+            (\( clientId, userId ) ->
+                sendToFrontend clientId
+                    (UpdateRoom
+                        (Rooms.toFrontendRoom userId room)
+                    )
+            )
+        |> Cmd.batch
+
+
+
+{-
+   broadcastToRoom room
+       clients
+       (UpdateRoom
+           (Rooms.toFrontendRoom room)
+       )
+-}
 
 
 broadcastToRoom : BackendRoom -> Clients -> ToFrontend -> Cmd BackendMsg
