@@ -178,8 +178,8 @@ view model =
                     let
                         message =
                             case room.state of
-                                Rooms.FrontWaitingForPlayers _ ->
-                                    room.userId ++ ": Waiting for players"
+                                Rooms.FrontWaitingForPlayers playersNeeded ->
+                                    "Waiting for players: " ++ String.fromInt playersNeeded ++ " more needed"
 
                                 Rooms.FrontPlaying { player } ->
                                     "Playing as " ++ Game.playerText player
