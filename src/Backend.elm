@@ -2,6 +2,7 @@ module Backend exposing (..)
 
 -- import Nonaga as Game
 
+import ClientState
 import Dict
 import Lamdera exposing (ClientId, SessionId, onConnect, onDisconnect, sendToFrontend)
 import Nonaga exposing (Player(..))
@@ -87,7 +88,7 @@ updateFromFrontend sessionId clientId msg model =
                     , Cmd.batch
                         [ sendToFrontend clientId
                             (JoinedRoom
-                                (Rooms.toFrontendRoom userId newRoom)
+                                (ClientState.toClientState userId newRoom)
                             )
                         , updateRoomClients
                             newRoom
@@ -118,20 +119,10 @@ updateRoomClients room clients =
             (\( clientId, userId ) ->
                 sendToFrontend clientId
                     (UpdateRoom
-                        (Rooms.toFrontendRoom userId room)
+                        (ClientState.toClientState userId room)
                     )
             )
         |> Cmd.batch
-
-
-
-{-
-   broadcastToRoom room
-       clients
-       (UpdateRoom
-           (Rooms.toFrontendRoom room)
-       )
--}
 
 
 broadcastToRoom : BackendRoom -> Clients -> ToFrontend -> Cmd BackendMsg

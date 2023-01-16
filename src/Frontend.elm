@@ -2,8 +2,8 @@ module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
+import ClientState
 import Components
-import Dict
 import Element exposing (..)
 import GraphicSVG.Widget as GraphicWidget
 import Lamdera exposing (sendToBackend)
@@ -42,7 +42,7 @@ init url key =
     in
     ( { key = key
       , state =
-            RoomSelection
+            ClientState.RoomSelection
                 { roomIdInputText = ""
                 , roomFull = False
                 }
@@ -77,10 +77,7 @@ update msg model =
                     ( model
                     , Cmd.batch
                         [ Nav.pushUrl model.key (Url.toString url)
-                        , sendToBackend
-                            (JoinOrCreateRoom (getUserId model.state)
-                                (RoomId.parse url.path)
-                            )
+                        , Debug.log "TODO: enter room by url click" Cmd.none
                         ]
                     )
 
@@ -111,7 +108,7 @@ update msg model =
         SetRoomIdInputText inputText ->
             let
                 newState =
-                    RoomSelection { roomIdInputText = inputText, roomFull = False }
+                    ClientState.RoomSelection { roomIdInputText = inputText, roomFull = False }
             in
             ( { model | state = newState }
             , Cmd.none
@@ -119,13 +116,13 @@ update msg model =
 
         SubmitRoomId ->
             case model.state of
-                RoomSelection { roomIdInputText } ->
+                ClientState.RoomSelection { roomIdInputText } ->
                     ( model
                     , sendToBackend
-                        (JoinOrCreateRoom (getUserId model.state) (RoomId.parse roomIdInputText))
+                        (JoinOrCreateRoom (ClientState.getUserId model.state) (RoomId.parse roomIdInputText))
                     )
 
-                Inside _ ->
+                _ ->
                     ( model, Cmd.none )
 
 
@@ -135,20 +132,20 @@ updateFromBackend msg model =
         UpdateGameModel gameModel ->
             ( model, Cmd.none )
 
-        JoinedRoom room ->
-            ( { model | state = Inside room }
-            , Nav.pushUrl model.key (RoomId.toString room.id)
+        JoinedRoom clientState ->
+            ( { model | state = clientState }
+            , Nav.pushUrl model.key (Debug.log "TODO: RoomId in the url, proper message" "plop")
             )
 
-        UpdateRoom room ->
+        UpdateRoom clientState ->
             case model.state of
-                RoomSelection _ ->
+                ClientState.RoomSelection _ ->
                     ( model, Cmd.none )
 
-                Inside { userId } ->
+                _ ->
                     let
                         newModel =
-                            { model | state = Inside room }
+                            { model | state = clientState }
                     in
                     ( newModel, Cmd.none )
 
@@ -156,10 +153,10 @@ updateFromBackend msg model =
             let
                 newState =
                     case model.state of
-                        RoomSelection state ->
-                            RoomSelection { state | roomFull = True }
+                        ClientState.RoomSelection state ->
+                            ClientState.RoomSelection { state | roomFull = True }
 
-                        Inside _ ->
+                        _ ->
                             model.state
             in
             ( { model | state = newState }, Cmd.none )
@@ -171,31 +168,23 @@ view model =
     , body =
         [ Element.layout []
             (case model.state of
-                RoomSelection { roomIdInputText, roomFull } ->
+                ClientState.RoomSelection { roomIdInputText, roomFull } ->
                     Components.joinRoomForm SubmitRoomId roomIdInputText roomFull
 
-                Inside room ->
+                ClientState.ClientWaitingForPlayers { playersNeeded } ->
                     let
                         message =
-                            case room.state of
-                                Rooms.FrontWaitingForPlayers playersNeeded ->
-                                    "Waiting for players: " ++ String.fromInt playersNeeded ++ " more needed"
+                            "Waiting for players: " ++ String.fromInt playersNeeded ++ " more needed"
+                    in
+                    Element.text message
 
-                                Rooms.FrontPlaying { player } ->
-                                    "Playing as " ++ Game.playerText player
+                ClientState.ClientPlaying { player } ->
+                    let
+                        message =
+                            "Playing as " ++ Game.playerText player
                     in
                     Element.text message
              -- [ GraphicWidget.view model.gameWidgetState (Game.view model.gameModel) ]
             )
         ]
     }
-
-
-getUserId : ClientState -> Maybe UserId
-getUserId clientState =
-    case clientState of
-        RoomSelection _ ->
-            Nothing
-
-        Inside { userId } ->
-            Just userId

@@ -2,6 +2,7 @@ module Types exposing (..)
 
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
+import ClientState
 import Dict exposing (Dict)
 import Element exposing (..)
 import GraphicSVG.Widget as Widget
@@ -22,9 +23,8 @@ type alias FrontendModel =
     }
 
 
-type ClientState
-    = RoomSelection { roomIdInputText : String, roomFull : Bool }
-    | Inside FrontendRoom
+type alias ClientState =
+    ClientState.ClientState
 
 
 type alias Rooms =
@@ -37,18 +37,6 @@ type alias RoomId =
 
 type alias BackendRoom =
     Rooms.BackendRoom
-
-
-type alias BackendRoomState =
-    Rooms.BackendRoomState
-
-
-type alias FrontendRoom =
-    Rooms.FrontendRoom
-
-
-type alias FrontendRoomState =
-    Rooms.FrontendRoomState
 
 
 type alias UserId =
@@ -95,6 +83,6 @@ type BackendMsg
 
 type ToFrontend
     = UpdateGameModel Game.Model
-    | JoinedRoom FrontendRoom
-    | UpdateRoom FrontendRoom
+    | JoinedRoom ClientState
+    | UpdateRoom ClientState
     | RoomFull

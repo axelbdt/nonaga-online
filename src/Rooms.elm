@@ -6,26 +6,13 @@ import RoomId exposing (RoomId)
 import Set exposing (Set)
 
 
-type alias FrontendRoom =
-    { id : RoomId, userId : UserId, state : FrontendRoomState }
-
-
 type alias UserId =
     String
 
 
-type alias BackendRoom =
-    { id : RoomId, state : BackendRoomState }
-
-
-type BackendRoomState
-    = WaitingForPlayers (Set UserId)
-    | Playing { users : Dict UserId Player, gameModel : Game.Model }
-
-
-type FrontendRoomState
-    = FrontWaitingForPlayers Int
-    | FrontPlaying { player : Player, gameModel : Game.Model }
+type BackendRoom
+    = WaitingForPlayers { id : RoomId, users : Set UserId }
+    | Playing { id : RoomId, users : Dict UserId Player, gameModel : Game.Model }
 
 
 type Rooms
@@ -40,10 +27,20 @@ emptyRoomUsers =
     Set.empty
 
 
+getId : BackendRoom -> RoomId
+getId room =
+    case room of
+        WaitingForPlayers { id } ->
+            id
+
+        Playing { id } ->
+            id
+
+
 getUsers : BackendRoom -> Set UserId
 getUsers room =
-    case room.state of
-        WaitingForPlayers users ->
+    case room of
+        WaitingForPlayers { users } ->
             users
 
         Playing { users } ->
@@ -51,37 +48,14 @@ getUsers room =
                 |> Set.fromList
 
 
-updateState : BackendRoom -> BackendRoomState -> BackendRoom
-updateState room newState =
-    { room | state = newState }
-
-
-userInRoom : UserId -> BackendRoomState -> Bool
-userInRoom userId roomState =
-    case roomState of
-        WaitingForPlayers users ->
+userInRoom : UserId -> BackendRoom -> Bool
+userInRoom userId room =
+    case room of
+        WaitingForPlayers { users } ->
             Set.member userId users
 
         Playing { users } ->
             Dict.member userId users
-
-
-toFrontendRoomState userId roomState =
-    case roomState of
-        WaitingForPlayers users ->
-            FrontWaitingForPlayers (gamePlayerNumber - Set.size users)
-
-        Playing { users, gameModel } ->
-            case Dict.get userId users of
-                Nothing ->
-                    Debug.log "TODO" FrontWaitingForPlayers 0
-
-                Just player ->
-                    FrontPlaying { player = player, gameModel = gameModel }
-
-
-toFrontendRoom userId room =
-    { id = room.id, userId = userId, state = toFrontendRoomState userId room.state }
 
 
 get : RoomId -> Rooms -> Maybe BackendRoom
@@ -93,7 +67,7 @@ getWithDefault : RoomId -> Rooms -> BackendRoom
 getWithDefault roomId rooms =
     case get roomId rooms of
         Nothing ->
-            { id = roomId, state = WaitingForPlayers emptyRoomUsers }
+            WaitingForPlayers { id = roomId, users = emptyRoomUsers }
 
         Just room ->
             room
@@ -101,14 +75,15 @@ getWithDefault roomId rooms =
 
 insert : BackendRoom -> Rooms -> Rooms
 insert room (Rooms roomsDict) =
-    Dict.insert (RoomId.toString room.id) room roomsDict
+    Dict.insert (RoomId.toString (getId room)) room roomsDict
         |> Rooms
 
 
 findUserRoom : UserId -> Rooms -> Maybe BackendRoom
 findUserRoom userId (Rooms roomsDict) =
-    Dict.filter (\_ { state } -> userInRoom userId state) roomsDict
+    roomsDict
         |> Dict.values
+        |> List.filter (userInRoom userId)
         |> List.head
 
 
@@ -120,11 +95,8 @@ leave userId rooms =
 
         Just room ->
             let
-                newState =
-                    removeFromState userId room.state
-
                 newRoom =
-                    { room | state = newState }
+                    removeFromRoom userId room
 
                 newRooms =
                     insert newRoom rooms
@@ -132,12 +104,11 @@ leave userId rooms =
             ( Just newRoom, newRooms )
 
 
-removeFromState : UserId -> BackendRoomState -> BackendRoomState
-removeFromState userId roomState =
-    case roomState of
-        WaitingForPlayers users ->
-            Set.remove userId users
-                |> WaitingForPlayers
+removeFromRoom : UserId -> BackendRoom -> BackendRoom
+removeFromRoom userId room =
+    case room of
+        WaitingForPlayers state ->
+            WaitingForPlayers { state | users = Set.remove userId state.users }
 
         Playing state ->
             Playing { state | users = Dict.remove userId state.users }
@@ -156,43 +127,41 @@ assignPlayer aUserId assignedUsers =
             Dict.insert aUserId player assignedUsers
 
 
-gamePlayerNumber : Int
-gamePlayerNumber =
-    2
-
-
-startPlayingIfReady roomState =
-    case roomState of
+startPlayingIfReady room =
+    case room of
         Playing _ ->
-            roomState
+            room
 
-        WaitingForPlayers clients ->
-            if Set.size clients == gamePlayerNumber then
+        WaitingForPlayers state ->
+            if Set.size state.users == Game.playerNumber then
                 let
                     assignedClients =
-                        clients
+                        state.users
                             |> Set.toList
                             |> List.foldl assignPlayer Dict.empty
                 in
-                Playing { users = assignedClients, gameModel = Game.initialModel }
+                Playing
+                    { id = state.id
+                    , users = assignedClients
+                    , gameModel = Game.initialModel
+                    }
 
             else
-                WaitingForPlayers clients
+                room
 
 
 join userId roomToJoin =
-    case roomToJoin.state of
-        WaitingForPlayers users ->
+    case roomToJoin of
+        WaitingForPlayers state ->
             let
                 newUsers =
-                    Set.insert userId users
+                    Set.insert userId state.users
 
-                newState =
-                    WaitingForPlayers newUsers
+                newRoom =
+                    WaitingForPlayers { state | users = newUsers }
                         |> startPlayingIfReady
             in
-            updateState roomToJoin newState
-                |> Ok
+            Ok newRoom
 
         Playing state ->
             if Dict.size state.users < 2 then
@@ -200,11 +169,10 @@ join userId roomToJoin =
                     newUsers =
                         assignPlayer userId state.users
 
-                    newState =
+                    newRoom =
                         Playing { state | users = newUsers }
                 in
-                updateState roomToJoin newState
-                    |> Ok
+                Ok newRoom
 
             else
                 Err roomToJoin

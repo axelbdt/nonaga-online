@@ -5,6 +5,11 @@ import GraphicSVG as G
 import Set exposing (Set)
 
 
+playerNumber : Int
+playerNumber =
+    2
+
+
 type Player
     = Red
     | Black
