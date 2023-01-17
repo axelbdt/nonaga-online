@@ -9,7 +9,6 @@ import GraphicSVG.Widget as GraphicWidget
 import Lamdera exposing (sendToBackend)
 import Nonaga as Game
 import RoomId as RoomId
-import Rooms
 import Types exposing (..)
 import Url
 import Url.Parser as Parser
@@ -26,9 +25,15 @@ app =
         , onUrlChange = UrlChanged
         , update = update
         , updateFromBackend = updateFromBackend
-        , subscriptions = \_ -> Sub.none -- \_ -> Sub.map GameWidgetMsg GraphicWidget.subscriptions
+        , subscriptions = subscriptions
         , view = view
         }
+
+
+subscriptions model =
+    Sub.batch
+        [ Sub.map GameWidgetMsg GraphicWidget.subscriptions
+        ]
 
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
@@ -46,12 +51,10 @@ init url key =
                 { roomIdInputText = ""
                 , roomFull = False
                 }
-
-      -- , gameModel = Game.initialModel
-      -- , gameWidgetState = gameWidgetState
+      , gameWidgetState = gameWidgetState
       }
     , Cmd.batch
-        [ Cmd.none -- Cmd.map GameWidgetMsg gameWidgetCommand
+        [ Cmd.map GameWidgetMsg gameWidgetCommand
         , case maybeRoomId of
             Nothing ->
                 Cmd.none
@@ -94,17 +97,16 @@ update msg model =
         NoOpFrontendMsg ->
             ( model, Cmd.none )
 
-        {-
-           GameMsg gameMsg ->
-               ( model, sendToBackend (ForwardGameMsg gameMsg) )
+        GameMsg gameMsg ->
+            ( model, sendToBackend (ForwardGameMsg gameMsg) )
 
-           GameWidgetMsg gameWidgetMessage ->
-               let
-                   ( newWidgetState, widgetCommand ) =
-                       GraphicWidget.update gameWidgetMessage model.gameWidgetState
-               in
-               ( { model | gameWidgetState = newWidgetState }, Cmd.map GameWidgetMsg widgetCommand )
-        -}
+        GameWidgetMsg gameWidgetMessage ->
+            let
+                ( newWidgetState, widgetCommand ) =
+                    GraphicWidget.update gameWidgetMessage model.gameWidgetState
+            in
+            ( { model | gameWidgetState = newWidgetState }, Cmd.map GameWidgetMsg widgetCommand )
+
         SetRoomIdInputText inputText ->
             let
                 newState =
@@ -178,13 +180,18 @@ view model =
                     in
                     Element.text message
 
-                ClientState.ClientPlaying { player } ->
-                    let
-                        message =
-                            "Playing as " ++ Game.playerText player
-                    in
-                    Element.text message
-             -- [ GraphicWidget.view model.gameWidgetState (Game.view model.gameModel) ]
+                ClientState.ClientPlaying { player, gameModel } ->
+                    Element.column []
+                        [ let
+                            message =
+                                "Playing as " ++ Game.playerText player
+                          in
+                          Element.text message
+                        , Element.map GameMsg
+                            (Element.html
+                                (GraphicWidget.view model.gameWidgetState (Game.view gameModel))
+                            )
+                        ]
             )
         ]
     }

@@ -5,21 +5,18 @@ import Browser.Navigation exposing (Key)
 import ClientState
 import Dict exposing (Dict)
 import Element exposing (..)
-import GraphicSVG.Widget as Widget
+import GraphicSVG.Widget as GraphicWidget
 import Lamdera exposing (ClientId, SessionId)
 import Nonaga as Game
 import RoomId
 import Rooms
-import Set exposing (Set)
 import Url exposing (Url)
 
 
 type alias FrontendModel =
     { key : Key
     , state : ClientState
-
-    -- , gameModel : Game.Model
-    -- , gameWidgetState : Widget.Model
+    , gameWidgetState : GraphicWidget.Model
     }
 
 
@@ -65,8 +62,8 @@ type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
     | NoOpFrontendMsg
-      -- | GameWidgetMsg Widget.Msg
-      -- | GameMsg Game.Msg
+    | GameWidgetMsg GraphicWidget.Msg
+    | GameMsg Game.Msg
     | SubmitRoomId
     | SetRoomIdInputText String
 
