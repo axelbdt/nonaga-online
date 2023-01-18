@@ -81,10 +81,7 @@ update msg model =
             case urlRequest of
                 Internal url ->
                     ( model
-                    , Cmd.batch
-                        [ Nav.pushUrl model.key (Url.toString url)
-                        , Debug.log "TODO: enter room by url click" Cmd.none
-                        ]
+                    , Nav.pushUrl model.key (Url.toString url)
                     )
 
                 External url ->
