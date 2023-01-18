@@ -26,6 +26,19 @@ getUserId clientState =
             Just userId
 
 
+getRoomId : ClientState -> Maybe RoomId
+getRoomId state =
+    case state of
+        RoomSelection _ ->
+            Nothing
+
+        ClientWaitingForPlayers { roomId } ->
+            Just roomId
+
+        ClientPlaying { roomId } ->
+            Just roomId
+
+
 toClientState : UserId -> BackendRoom -> ClientState
 toClientState userId room =
     let

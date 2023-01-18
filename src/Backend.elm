@@ -56,8 +56,27 @@ update msg model =
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
 updateFromFrontend sessionId clientId msg model =
     case msg of
-        ForwardGameMsg gameMsg ->
-            ( model, Cmd.none )
+        ForwardGameMsg { userId, roomId, gameMsg } ->
+            case Rooms.get roomId model.rooms of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just room ->
+                    let
+                        newRoom =
+                            Rooms.handleGameMsg userId gameMsg room
+
+                        newRooms =
+                            Rooms.insert newRoom model.rooms
+
+                        newModel =
+                            { model | rooms = newRooms }
+                    in
+                    ( newModel
+                    , updateRoomClients
+                        newRoom
+                        model.clients
+                    )
 
         JoinOrCreateRoom maybeUserId roomId ->
             let

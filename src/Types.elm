@@ -69,7 +69,7 @@ type FrontendMsg
 
 
 type ToBackend
-    = ForwardGameMsg Game.Msg
+    = ForwardGameMsg { userId : UserId, roomId : RoomId, gameMsg : Game.Msg }
     | JoinOrCreateRoom (Maybe UserId) RoomId
 
 

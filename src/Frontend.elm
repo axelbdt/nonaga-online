@@ -2,7 +2,7 @@ module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import ClientState
+import ClientState exposing (ClientState(..))
 import Components
 import Element exposing (..)
 import GraphicSVG.Widget as GraphicWidget
@@ -48,7 +48,10 @@ init url key =
     ( { key = key
       , state =
             ClientState.RoomSelection
-                { roomIdInputText = ""
+                { roomIdInputText =
+                    maybeRoomId
+                        |> Maybe.map RoomId.toString
+                        |> Maybe.withDefault ""
                 , roomFull = False
                 }
       , gameWidgetState = gameWidgetState
@@ -98,7 +101,15 @@ update msg model =
             ( model, Cmd.none )
 
         GameMsg gameMsg ->
-            ( model, sendToBackend (ForwardGameMsg gameMsg) )
+            case model.state of
+                RoomSelection _ ->
+                    ( model, Cmd.none )
+
+                ClientWaitingForPlayers _ ->
+                    ( model, Cmd.none )
+
+                ClientPlaying { roomId, userId } ->
+                    ( model, sendToBackend (ForwardGameMsg { roomId = roomId, userId = userId, gameMsg = gameMsg }) )
 
         GameWidgetMsg gameWidgetMessage ->
             let
@@ -135,8 +146,17 @@ updateFromBackend msg model =
             ( model, Cmd.none )
 
         JoinedRoom clientState ->
+            let
+                commands =
+                    case ClientState.getRoomId clientState of
+                        Nothing ->
+                            Cmd.none
+
+                        Just roomId ->
+                            Nav.pushUrl model.key (RoomId.toString roomId)
+            in
             ( { model | state = clientState }
-            , Nav.pushUrl model.key (Debug.log "TODO: RoomId in the url, proper message" "plop")
+            , commands
             )
 
         UpdateRoom clientState ->
@@ -168,7 +188,7 @@ view : Model -> Browser.Document FrontendMsg
 view model =
     { title = ""
     , body =
-        [ Element.layout []
+        [ Element.layout [ Element.width fill ]
             (case model.state of
                 ClientState.RoomSelection { roomIdInputText, roomFull } ->
                     Components.joinRoomForm SubmitRoomId roomIdInputText roomFull
@@ -181,7 +201,7 @@ view model =
                     Element.text message
 
                 ClientState.ClientPlaying { player, gameModel } ->
-                    Element.column []
+                    Element.column [ Element.width fill ]
                         [ let
                             message =
                                 "Playing as " ++ Game.playerText player

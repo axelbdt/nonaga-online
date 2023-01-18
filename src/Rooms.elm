@@ -176,3 +176,12 @@ join userId roomToJoin =
 
             else
                 Err roomToJoin
+
+
+handleGameMsg userId gameMsg room =
+    case room of
+        WaitingForPlayers _ ->
+            room
+
+        Playing state ->
+            Playing { state | gameModel = Game.update gameMsg state.gameModel }
