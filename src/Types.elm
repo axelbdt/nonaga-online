@@ -79,7 +79,6 @@ type BackendMsg
 
 
 type ToFrontend
-    = UpdateGameModel Game.Model
-    | JoinedRoom ClientState
+    = JoinedRoom ClientState
     | UpdateRoom ClientState
     | RoomFull

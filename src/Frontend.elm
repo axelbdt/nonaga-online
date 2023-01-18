@@ -142,9 +142,6 @@ update msg model =
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
     case msg of
-        UpdateGameModel gameModel ->
-            ( model, Cmd.none )
-
         JoinedRoom clientState ->
             let
                 commands =

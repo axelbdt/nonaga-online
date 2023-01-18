@@ -184,4 +184,12 @@ handleGameMsg userId gameMsg room =
             room
 
         Playing state ->
-            Playing { state | gameModel = Game.update gameMsg state.gameModel }
+            if
+                Dict.get userId state.users
+                    |> Maybe.map (Game.playerEquals state.gameModel.currentPlayer)
+                    |> Maybe.withDefault False
+            then
+                Playing { state | gameModel = Game.update gameMsg state.gameModel }
+
+            else
+                room
