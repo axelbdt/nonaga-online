@@ -214,8 +214,15 @@ moveToken tokens from to =
             tokens
 
 
-checkWinner : Player -> Tokens -> Bool
-checkWinner player tokens =
+getWinner : Model -> Maybe Player
+getWinner model =
+    [ Red, Black ]
+        |> List.filter (checkWinner model.tokens)
+        |> List.head
+
+
+checkWinner : Tokens -> Player -> Bool
+checkWinner tokens player =
     let
         platforms =
             Dict.filter (\_ p -> p == player) tokens
@@ -262,7 +269,7 @@ update msg model =
             case model.turnPhase of
                 MovePlatform ->
                     if
-                        not (checkWinner model.currentPlayer model.tokens)
+                        not (checkWinner model.tokens model.currentPlayer)
                             && platformIsSelectable model.board model.tokens platform
                             && (platform /= model.lastMovedPlatform)
                     then
@@ -317,11 +324,6 @@ view model =
                     |> Set.toList
                     |> List.map (tokenDestinationView model.currentPlayer selected)
         )
-    , if checkWinner model.currentPlayer model.tokens then
-        winnerView model.currentPlayer
-
-      else
-        G.group []
     ]
 
 
@@ -423,20 +425,6 @@ tokenDestinationView player from to =
         |> placeShape to
         |> G.makeTransparent 0.6
         |> G.notifyTap (ChooseTokenDestination from to)
-
-
-winnerView : Player -> G.Shape Msg
-winnerView player =
-    G.group
-        [ G.roundedRect 240 120 5 |> G.filled G.white
-        , G.text (playerText player ++ " wins!") |> G.centered |> G.size 32 |> G.filled (tokenColor player False) |> G.move ( 0, 16 )
-        , G.group
-            [ G.roundedRect 96 48 5 |> G.filled (tokenColor player False)
-            , G.text "Retry" |> G.centered |> G.size 24 |> G.filled G.white |> G.move ( 0, -8 )
-            ]
-            |> G.move ( 0, -24 )
-            |> G.notifyTap Reset
-        ]
 
 
 playerText : Player -> String

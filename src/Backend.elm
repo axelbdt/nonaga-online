@@ -50,7 +50,24 @@ update msg model =
             ( model, Cmd.none )
 
         ClientDisconnected sessionId clientId ->
-            ( model, Cmd.none )
+            case Dict.get clientId model.clients of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just userId ->
+                    let
+                        newClients =
+                            Dict.remove clientId model.clients
+
+                        ( maybeRoom, newRooms ) =
+                            Rooms.leave userId model.rooms
+                    in
+                    case maybeRoom of
+                        Nothing ->
+                            ( { model | clients = newClients }, Cmd.none )
+
+                        Just room ->
+                            ( { model | rooms = newRooms, clients = newClients }, updateRoomClients room model.clients )
 
 
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )

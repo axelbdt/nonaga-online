@@ -175,7 +175,7 @@ updateFromBackend msg model =
                         _ ->
                             model.state
             in
-            ( { model | state = newState }, Cmd.none )
+            ( { model | state = newState }, Nav.pushUrl model.key "/" )
 
 
 view : Model -> Browser.Document FrontendMsg
@@ -197,10 +197,25 @@ view model =
                 ClientState.ClientPlaying { player, gameModel } ->
                     Element.column [ Element.width fill ]
                         [ let
-                            message =
+                            playerInfo =
                                 "Playing as " ++ Game.playerText player
                           in
-                          Element.text message
+                          Element.text playerInfo
+                        , let
+                            turnInfo =
+                                case Game.getWinner gameModel of
+                                    Just winner ->
+                                        Game.playerText winner ++ " has won."
+
+                                    Nothing ->
+                                        case gameModel.turnPhase of
+                                            Game.MoveToken ->
+                                                Game.playerText gameModel.currentPlayer ++ " must move a token."
+
+                                            Game.MovePlatform ->
+                                                Game.playerText gameModel.currentPlayer ++ " must move a platform."
+                          in
+                          Element.text turnInfo
                         , Element.map GameMsg
                             (Element.html
                                 (GraphicWidget.view model.gameWidgetState (Game.view gameModel))

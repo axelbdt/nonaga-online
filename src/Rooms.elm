@@ -101,7 +101,7 @@ leave userId rooms =
                 newRooms =
                     insert newRoom rooms
             in
-            ( Just newRoom, newRooms )
+            ( Just (Debug.log "Leave Room" newRoom), newRooms )
 
 
 removeFromRoom : UserId -> BackendRoom -> BackendRoom
