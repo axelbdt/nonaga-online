@@ -1,4 +1,4 @@
-module Components exposing (joinRoomForm)
+module Components exposing (joinRoomForm, messagesColumn)
 
 import Element exposing (..)
 import Element.Font as Font
@@ -65,3 +65,8 @@ joinRoomForm onSubmit roomId roomFull =
                 ]
             )
         )
+
+
+messagesColumn messages =
+    Element.column [ Element.centerX, Element.padding 8 ]
+        (List.map (\m -> Element.el [ centerX ] (Element.text m)) messages)

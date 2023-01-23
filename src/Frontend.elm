@@ -192,16 +192,14 @@ view model =
                         message =
                             "Waiting for players: " ++ String.fromInt playersNeeded ++ " more needed"
                     in
-                    Element.text message
+                    Components.messagesColumn [ message ]
 
                 ClientState.ClientPlaying { player, gameModel } ->
                     Element.column [ Element.width fill ]
                         [ let
                             playerInfo =
                                 "Playing as " ++ Game.playerText player
-                          in
-                          Element.text playerInfo
-                        , let
+
                             turnInfo =
                                 case Game.getWinner gameModel of
                                     Just winner ->
@@ -215,7 +213,10 @@ view model =
                                             Game.MovePlatform ->
                                                 Game.playerText gameModel.currentPlayer ++ " must move a platform."
                           in
-                          Element.text turnInfo
+                          Components.messagesColumn
+                            [ playerInfo
+                            , turnInfo
+                            ]
                         , Element.map GameMsg
                             (Element.html
                                 (GraphicWidget.view model.gameWidgetState (Game.view gameModel))
