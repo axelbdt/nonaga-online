@@ -63,8 +63,8 @@ update msg model =
                             ( { model | clients = newClients }, Cmd.none )
 
                         ( Just room, newRooms ) ->
-                            ( { model | rooms = newRooms, clients = Debug.log "newclients" newClients }
-                            , Cmd.batch [ updateRoomClients room model.clients, Lamdera.broadcast (LogClients model.clients) ]
+                            ( { model | rooms = newRooms, clients = newClients }
+                            , updateRoomClients room model.clients
                             )
 
 
@@ -130,12 +130,7 @@ updateFromFrontend sessionId clientId msg model =
                                 Err _ ->
                                     LeftRoom
                             )
-                        , Cmd.batch
-                            [ updateRoomClients
-                                newRoom
-                                newClients
-                            , Lamdera.broadcast (LogClients newClients)
-                            ]
+                        , updateRoomClients newRoom newClients
                         ]
                     )
 

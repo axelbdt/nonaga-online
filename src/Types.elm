@@ -79,4 +79,3 @@ type ToFrontend
     | LeftRoom
     | UpdateRoom ClientState
     | RoomFull
-    | LogClients Clients
