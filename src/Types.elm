@@ -33,7 +33,7 @@ type alias RoomId =
 
 
 type alias BackendRoom =
-    Rooms.BackendRoom
+    Rooms.Room
 
 
 type alias UserId =
@@ -80,5 +80,6 @@ type BackendMsg
 
 type ToFrontend
     = JoinedRoom ClientState
+    | LeftRoom
     | UpdateRoom ClientState
     | RoomFull

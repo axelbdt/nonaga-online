@@ -1,4 +1,4 @@
-module Components exposing (joinRoomForm, messagesColumn)
+module Components exposing (joinRoomForm, messagesColumn, playAgainButton)
 
 import Element exposing (..)
 import Element.Font as Font
@@ -20,13 +20,6 @@ palette =
 
 joinRoomForm onSubmit roomId roomFull =
     let
-        joinRoomButton =
-            W.button
-                (Material.containedButton palette
-                    |> Customize.elementButton [ Element.centerX ]
-                )
-                { text = "Enter room", icon = loginIcon, onPress = Just onSubmit }
-
         roomIdInput =
             { chips = []
             , text = roomId
@@ -35,6 +28,13 @@ joinRoomForm onSubmit roomId roomFull =
             , onChange = SetRoomIdInputText
             }
                 |> W.textInput (Material.textInput palette)
+
+        joinRoomButton =
+            W.button
+                (Material.containedButton palette
+                    |> Customize.elementButton [ Element.centerX ]
+                )
+                { text = "Enter room", icon = loginIcon, onPress = Just onSubmit }
 
         loginIcon =
             Material.Icons.login |> Widget.Icon.elmMaterialIcons Color
@@ -65,6 +65,14 @@ joinRoomForm onSubmit roomId roomFull =
                 ]
             )
         )
+
+
+playAgainButton onClick =
+    W.textButton
+        (Material.containedButton palette
+            |> Customize.elementButton [ Element.centerX ]
+        )
+        { text = "Play again", onPress = Just onClick }
 
 
 messagesColumn messages =

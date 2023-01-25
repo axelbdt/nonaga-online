@@ -3,7 +3,7 @@ module ClientState exposing (..)
 import Dict
 import Nonaga as Game exposing (Player)
 import RoomId exposing (RoomId)
-import Rooms exposing (BackendRoom(..), UserId)
+import Rooms exposing (Room(..), UserId)
 import Set
 
 
@@ -11,6 +11,11 @@ type ClientState
     = RoomSelection { roomIdInputText : String, roomFull : Bool }
     | ClientWaitingForPlayers { roomId : RoomId, userId : UserId, playersNeeded : Int }
     | ClientPlaying { roomId : RoomId, userId : UserId, player : Player, gameModel : Game.Model }
+
+
+roomSelectionInitialState : ClientState
+roomSelectionInitialState =
+    RoomSelection { roomIdInputText = "", roomFull = False }
 
 
 getUserId : ClientState -> Maybe UserId
@@ -39,7 +44,7 @@ getRoomId state =
             Just roomId
 
 
-toClientState : UserId -> BackendRoom -> ClientState
+toClientState : UserId -> Room -> Result String ClientState
 toClientState userId room =
     let
         roomId =
@@ -47,21 +52,25 @@ toClientState userId room =
     in
     case room of
         WaitingForPlayers state ->
-            ClientWaitingForPlayers
-                { roomId = roomId
-                , userId = userId
-                , playersNeeded = Game.playerNumber - Set.size state.users
-                }
+            Ok
+                (ClientWaitingForPlayers
+                    { roomId = roomId
+                    , userId = userId
+                    , playersNeeded = Game.playerNumber - Set.size state.users
+                    }
+                )
 
         Playing { users, gameModel } ->
             case Dict.get userId users of
                 Nothing ->
-                    ClientWaitingForPlayers { roomId = roomId, userId = userId, playersNeeded = 0 }
+                    Err "Client not found in room"
 
                 Just player ->
-                    ClientPlaying
-                        { roomId = roomId
-                        , userId = userId
-                        , player = player
-                        , gameModel = gameModel
-                        }
+                    Ok
+                        (ClientPlaying
+                            { roomId = roomId
+                            , userId = userId
+                            , player = player
+                            , gameModel = gameModel
+                            }
+                        )

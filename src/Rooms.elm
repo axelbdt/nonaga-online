@@ -10,13 +10,13 @@ type alias UserId =
     String
 
 
-type BackendRoom
+type Room
     = WaitingForPlayers { id : RoomId, users : Set UserId }
     | Playing { id : RoomId, users : Dict UserId Player, gameModel : Game.Model }
 
 
 type Rooms
-    = Rooms (Dict String BackendRoom)
+    = Rooms (Dict String Room)
 
 
 empty =
@@ -27,7 +27,7 @@ emptyRoomUsers =
     Set.empty
 
 
-getId : BackendRoom -> RoomId
+getId : Room -> RoomId
 getId room =
     case room of
         WaitingForPlayers { id } ->
@@ -37,7 +37,7 @@ getId room =
             id
 
 
-getUsers : BackendRoom -> Set UserId
+getUsers : Room -> Set UserId
 getUsers room =
     case room of
         WaitingForPlayers { users } ->
@@ -48,7 +48,7 @@ getUsers room =
                 |> Set.fromList
 
 
-userInRoom : UserId -> BackendRoom -> Bool
+userInRoom : UserId -> Room -> Bool
 userInRoom userId room =
     case room of
         WaitingForPlayers { users } ->
@@ -58,12 +58,12 @@ userInRoom userId room =
             Dict.member userId users
 
 
-get : RoomId -> Rooms -> Maybe BackendRoom
+get : RoomId -> Rooms -> Maybe Room
 get roomId (Rooms roomsDict) =
     Dict.get (RoomId.toString roomId) roomsDict
 
 
-getWithDefault : RoomId -> Rooms -> BackendRoom
+getWithDefault : RoomId -> Rooms -> Room
 getWithDefault roomId rooms =
     case get roomId rooms of
         Nothing ->
@@ -73,13 +73,13 @@ getWithDefault roomId rooms =
             room
 
 
-insert : BackendRoom -> Rooms -> Rooms
+insert : Room -> Rooms -> Rooms
 insert room (Rooms roomsDict) =
     Dict.insert (RoomId.toString (getId room)) room roomsDict
         |> Rooms
 
 
-findUserRoom : UserId -> Rooms -> Maybe BackendRoom
+findUserRoom : UserId -> Rooms -> Maybe Room
 findUserRoom userId (Rooms roomsDict) =
     roomsDict
         |> Dict.values
@@ -87,7 +87,7 @@ findUserRoom userId (Rooms roomsDict) =
         |> List.head
 
 
-leave : UserId -> Rooms -> ( Maybe BackendRoom, Rooms )
+leave : UserId -> Rooms -> ( Maybe Room, Rooms )
 leave userId rooms =
     case findUserRoom userId rooms of
         Nothing ->
@@ -104,7 +104,7 @@ leave userId rooms =
             ( Just (Debug.log "Leave Room" newRoom), newRooms )
 
 
-removeFromRoom : UserId -> BackendRoom -> BackendRoom
+removeFromRoom : UserId -> Room -> Room
 removeFromRoom userId room =
     case room of
         WaitingForPlayers state ->

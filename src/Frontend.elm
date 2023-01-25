@@ -31,9 +31,14 @@ app =
 
 
 subscriptions model =
-    Sub.batch
-        [ Sub.map GameWidgetMsg GraphicWidget.subscriptions
-        ]
+    case model.state of
+        ClientState.ClientPlaying _ ->
+            Sub.batch
+                [ Sub.map GameWidgetMsg GraphicWidget.subscriptions
+                ]
+
+        _ ->
+            Sub.none
 
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
@@ -139,17 +144,29 @@ update msg model =
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
     case msg of
-        JoinedRoom clientState ->
+        JoinedRoom newClientState ->
             let
                 commands =
-                    case ClientState.getRoomId clientState of
+                    case ClientState.getRoomId newClientState of
                         Nothing ->
                             Cmd.none
 
                         Just roomId ->
                             Nav.pushUrl model.key (RoomId.toString roomId)
             in
-            ( { model | state = clientState }
+            ( { model | state = newClientState }
+            , commands
+            )
+
+        LeftRoom ->
+            let
+                newClientState =
+                    ClientState.roomSelectionInitialState
+
+                commands =
+                    Nav.pushUrl model.key "/"
+            in
+            ( { model | state = newClientState }
             , commands
             )
 
@@ -217,6 +234,12 @@ view model =
                             [ playerInfo
                             , turnInfo
                             ]
+                        , case Game.getWinner gameModel of
+                            Nothing ->
+                                Element.none
+
+                            Just _ ->
+                                Components.playAgainButton (GameMsg Game.Reset)
                         , Element.map GameMsg
                             (Element.html
                                 (GraphicWidget.view model.gameWidgetState (Game.view gameModel))

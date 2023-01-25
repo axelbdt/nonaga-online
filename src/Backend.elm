@@ -58,15 +58,12 @@ update msg model =
                     let
                         newClients =
                             Dict.remove clientId model.clients
-
-                        ( maybeRoom, newRooms ) =
-                            Rooms.leave userId model.rooms
                     in
-                    case maybeRoom of
-                        Nothing ->
+                    case Rooms.leave userId model.rooms of
+                        ( Nothing, _ ) ->
                             ( { model | clients = newClients }, Cmd.none )
 
-                        Just room ->
+                        ( Just room, newRooms ) ->
                             ( { model | rooms = newRooms, clients = newClients }, updateRoomClients room model.clients )
 
 
@@ -123,8 +120,14 @@ updateFromFrontend sessionId clientId msg model =
                     ( { model | rooms = newRooms, clients = newClients }
                     , Cmd.batch
                         [ sendToFrontend clientId
-                            (JoinedRoom
-                                (ClientState.toClientState userId newRoom)
+                            (case
+                                ClientState.toClientState userId newRoom
+                             of
+                                Ok clientState ->
+                                    JoinedRoom clientState
+
+                                Err _ ->
+                                    LeftRoom
                             )
                         , updateRoomClients
                             newRoom
@@ -153,10 +156,15 @@ updateRoomClients room clients =
             )
         |> List.map
             (\( clientId, userId ) ->
-                sendToFrontend clientId
-                    (UpdateRoom
-                        (ClientState.toClientState userId room)
-                    )
+                case ClientState.toClientState userId room of
+                    Ok clientState ->
+                        sendToFrontend clientId
+                            (UpdateRoom
+                                clientState
+                            )
+
+                    Err _ ->
+                        sendToFrontend clientId LeftRoom
             )
         |> Cmd.batch
 
