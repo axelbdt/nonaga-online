@@ -3,14 +3,14 @@ module ClientState exposing (..)
 import Dict
 import Nonaga as Game exposing (Player)
 import RoomId exposing (RoomId)
-import Rooms exposing (Room(..), UserId)
+import Rooms exposing (Room, UserId)
 import Set
 
 
 type ClientState
     = RoomSelection { roomIdInputText : String, roomFull : Bool }
-    | ClientWaitingForPlayers { roomId : RoomId, userId : UserId, playersNeeded : Int }
-    | ClientPlaying { roomId : RoomId, userId : UserId, player : Player, gameModel : Game.Model }
+    | WaitingForPlayers { roomId : RoomId, userId : UserId, playersNeeded : Int }
+    | Playing { roomId : RoomId, userId : UserId, player : Player, gameModel : Game.Model }
 
 
 roomSelectionInitialState : ClientState
@@ -24,10 +24,10 @@ getUserId clientState =
         RoomSelection _ ->
             Nothing
 
-        ClientWaitingForPlayers { userId } ->
+        WaitingForPlayers { userId } ->
             Just userId
 
-        ClientPlaying { userId } ->
+        Playing { userId } ->
             Just userId
 
 
@@ -37,37 +37,37 @@ getRoomId state =
         RoomSelection _ ->
             Nothing
 
-        ClientWaitingForPlayers { roomId } ->
+        WaitingForPlayers { roomId } ->
             Just roomId
 
-        ClientPlaying { roomId } ->
+        Playing { roomId } ->
             Just roomId
 
 
-toClientState : UserId -> Room -> Result String ClientState
-toClientState userId room =
+fromRoom : UserId -> Room -> Result String ClientState
+fromRoom userId room =
     let
         roomId =
             Rooms.getId room
     in
     case room of
-        WaitingForPlayers state ->
+        Rooms.WaitingForPlayers state ->
             Ok
-                (ClientWaitingForPlayers
+                (WaitingForPlayers
                     { roomId = roomId
                     , userId = userId
                     , playersNeeded = Game.playerNumber - Set.size state.users
                     }
                 )
 
-        Playing { users, gameModel } ->
+        Rooms.Playing { users, gameModel } ->
             case Dict.get userId users of
                 Nothing ->
                     Err "Client not found in room"
 
                 Just player ->
                     Ok
-                        (ClientPlaying
+                        (Playing
                             { roomId = roomId
                             , userId = userId
                             , player = player

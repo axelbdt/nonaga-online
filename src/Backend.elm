@@ -121,7 +121,7 @@ updateFromFrontend sessionId clientId msg model =
                     , Cmd.batch
                         [ sendToFrontend clientId
                             (case
-                                ClientState.toClientState userId newRoom
+                                ClientState.fromRoom userId newRoom
                              of
                                 Ok clientState ->
                                     JoinedRoom clientState
@@ -156,7 +156,7 @@ updateRoomClients room clients =
             )
         |> List.map
             (\( clientId, userId ) ->
-                case ClientState.toClientState userId room of
+                case ClientState.fromRoom userId room of
                     Ok clientState ->
                         sendToFrontend clientId
                             (UpdateRoom

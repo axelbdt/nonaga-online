@@ -2,7 +2,7 @@ module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import ClientState exposing (ClientState(..))
+import ClientState exposing (ClientState)
 import Components
 import Element exposing (..)
 import GraphicSVG.Widget as GraphicWidget
@@ -32,13 +32,14 @@ app =
 
 subscriptions model =
     case model.state of
-        ClientState.ClientPlaying _ ->
-            Sub.batch
-                [ Sub.map GameWidgetMsg GraphicWidget.subscriptions
-                ]
-
-        _ ->
+        ClientState.RoomSelection _ ->
             Sub.none
+
+        ClientState.WaitingForPlayers _ ->
+            Sub.none
+
+        ClientState.Playing _ ->
+            Sub.map GameWidgetMsg GraphicWidget.subscriptions
 
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
@@ -61,15 +62,12 @@ init url key =
                 }
       , gameWidgetState = gameWidgetState
       }
-    , Cmd.batch
-        [ Cmd.map GameWidgetMsg gameWidgetCommand
-        , case maybeRoomId of
-            Nothing ->
-                Cmd.none
+    , case maybeRoomId of
+        Nothing ->
+            Cmd.none
 
-            Just roomId ->
-                sendToBackend (JoinOrCreateRoom Nothing roomId)
-        ]
+        Just roomId ->
+            sendToBackend (JoinOrCreateRoom Nothing roomId)
     )
 
 
@@ -104,13 +102,13 @@ update msg model =
 
         GameMsg gameMsg ->
             case model.state of
-                RoomSelection _ ->
+                ClientState.RoomSelection _ ->
                     ( model, Cmd.none )
 
-                ClientWaitingForPlayers _ ->
+                ClientState.WaitingForPlayers _ ->
                     ( model, Cmd.none )
 
-                ClientPlaying { roomId, userId } ->
+                ClientState.Playing { roomId, userId } ->
                     ( model, sendToBackend (ForwardGameMsg { roomId = roomId, userId = userId, gameMsg = gameMsg }) )
 
         GameWidgetMsg gameWidgetMessage ->
@@ -204,14 +202,14 @@ view model =
                 ClientState.RoomSelection { roomIdInputText, roomFull } ->
                     Components.joinRoomForm SubmitRoomId roomIdInputText roomFull
 
-                ClientState.ClientWaitingForPlayers { playersNeeded } ->
+                ClientState.WaitingForPlayers { playersNeeded } ->
                     let
                         message =
                             "Waiting for players: " ++ String.fromInt playersNeeded ++ " more needed"
                     in
                     Components.messagesColumn [ message ]
 
-                ClientState.ClientPlaying { player, gameModel } ->
+                ClientState.Playing { player, gameModel } ->
                     Element.column [ Element.width fill ]
                         [ let
                             playerInfo =
