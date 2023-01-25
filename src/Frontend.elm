@@ -192,6 +192,13 @@ updateFromBackend msg model =
             in
             ( { model | state = newState }, Nav.pushUrl model.key "/" )
 
+        LogClients clients ->
+            let
+                logClients =
+                    Debug.log "clients" clients
+            in
+            ( model, Cmd.none )
+
 
 view : Model -> Browser.Document FrontendMsg
 view model =

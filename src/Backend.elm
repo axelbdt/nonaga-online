@@ -1,8 +1,7 @@
 module Backend exposing (..)
 
--- import Nonaga as Game
-
 import ClientState
+import Clients
 import Dict
 import Lamdera exposing (ClientId, SessionId, onConnect, onDisconnect, sendToFrontend)
 import Nonaga exposing (Player(..))
@@ -50,7 +49,7 @@ update msg model =
             ( model, Cmd.none )
 
         ClientDisconnected sessionId clientId ->
-            case Dict.get clientId model.clients of
+            case Clients.findUserId clientId model.clients of
                 Nothing ->
                     ( model, Cmd.none )
 
@@ -64,7 +63,9 @@ update msg model =
                             ( { model | clients = newClients }, Cmd.none )
 
                         ( Just room, newRooms ) ->
-                            ( { model | rooms = newRooms, clients = newClients }, updateRoomClients room model.clients )
+                            ( { model | rooms = newRooms, clients = Debug.log "newclients" newClients }
+                            , Cmd.batch [ updateRoomClients room model.clients, Lamdera.broadcast (LogClients model.clients) ]
+                            )
 
 
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
@@ -129,9 +130,12 @@ updateFromFrontend sessionId clientId msg model =
                                 Err _ ->
                                     LeftRoom
                             )
-                        , updateRoomClients
-                            newRoom
-                            newClients
+                        , Cmd.batch
+                            [ updateRoomClients
+                                newRoom
+                                newClients
+                            , Lamdera.broadcast (LogClients newClients)
+                            ]
                         ]
                     )
 

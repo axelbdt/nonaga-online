@@ -3,7 +3,7 @@ module Types exposing (..)
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import ClientState
-import Dict exposing (Dict)
+import Clients
 import Element exposing (..)
 import GraphicSVG.Widget as GraphicWidget
 import Lamdera exposing (ClientId, SessionId)
@@ -44,12 +44,8 @@ type alias SessionData =
     { sessionId : SessionId, userId : UserId }
 
 
-type alias Sessions =
-    Dict SessionId SessionData
-
-
 type alias Clients =
-    Dict UserId ClientId
+    Clients.Clients
 
 
 type alias BackendModel =
@@ -83,3 +79,4 @@ type ToFrontend
     | LeftRoom
     | UpdateRoom ClientState
     | RoomFull
+    | LogClients Clients
