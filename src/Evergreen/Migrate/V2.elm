@@ -2,20 +2,13 @@ module Evergreen.Migrate.V2 exposing (..)
 
 import Evergreen.V1.Types as Old
 import Evergreen.V2.Types as New
+import Frontend
 import Lamdera.Migrations exposing (..)
 
 
 frontendModel : Old.FrontendModel -> ModelMigration New.FrontendModel New.FrontendMsg
 frontendModel old =
-    case old.state of
-        Old.ClientState.RoomSelection state ->
-            ( New.ClientState.RoomSelection state, Cmd.none )
-
-        Old.ClientState.ClientWaitingForPlayers state ->
-            ( New.ClientState.ClientWaitingForPlayers state, Cmd, none )
-
-        Old.ClientState.ClientPlaying state ->
-            ( New.ClientState.Playing state, Cmd.none )
+    ModelMigrated ( Frontend.initialModel old.key, Cmd.none )
 
 
 backendModel : Old.BackendModel -> ModelMigration New.BackendModel New.BackendMsg
