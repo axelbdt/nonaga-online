@@ -2,7 +2,7 @@ module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import ClientState exposing (ClientState)
+import ClientState
 import Components
 import Element exposing (..)
 import GraphicSVG.Widget as GraphicWidget
@@ -44,31 +44,41 @@ subscriptions model =
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
 init url key =
-    let
-        ( gameWidgetState, gameWidgetCommand ) =
-            GraphicWidget.init 3000 1000 "gameWidget"
-
-        maybeRoomId =
-            parseRoomId url
-    in
-    ( { key = key
-      , state =
-            ClientState.RoomSelection
-                { roomIdInputText =
-                    maybeRoomId
-                        |> Maybe.map RoomId.toString
-                        |> Maybe.withDefault ""
-                , roomFull = False
-                }
-      , gameWidgetState = gameWidgetState
-      }
-    , case maybeRoomId of
+    case parseRoomId url of
         Nothing ->
-            Cmd.none
+            ( initialModel key, Cmd.none )
 
         Just roomId ->
-            sendToBackend (JoinOrCreateRoom Nothing roomId)
-    )
+            let
+                model =
+                    initialModel key
+
+                clientState =
+                    ClientState.RoomSelection { roomIdInputText = RoomId.toString roomId, roomFull = False }
+            in
+            ( model
+            , sendToBackend
+                (JoinOrCreateRoom Nothing roomId)
+            )
+
+
+initialClientState =
+    ClientState.RoomSelection
+        { roomIdInputText = ""
+        , roomFull = False
+        }
+
+
+initialModel : Nav.Key -> FrontendModel
+initialModel key =
+    let
+        ( gameWidgetState, _ ) =
+            GraphicWidget.init 3000 1000 "gameWidget"
+    in
+    { key = key
+    , state = initialClientState
+    , gameWidgetState = gameWidgetState
+    }
 
 
 parseRoomId : Url.Url -> Maybe RoomId
