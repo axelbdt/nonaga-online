@@ -23,10 +23,6 @@ empty =
     Rooms Dict.empty
 
 
-emptyRoomUsers =
-    Set.empty
-
-
 getId : Room -> RoomId
 getId room =
     case room of
@@ -67,7 +63,7 @@ getWithDefault : RoomId -> Rooms -> Room
 getWithDefault roomId rooms =
     case get roomId rooms of
         Nothing ->
-            WaitingForPlayers { id = roomId, users = emptyRoomUsers }
+            WaitingForPlayers { id = roomId, users = Set.empty }
 
         Just room ->
             room
@@ -77,6 +73,22 @@ insert : Room -> Rooms -> Rooms
 insert room (Rooms roomsDict) =
     Dict.insert (RoomId.toString (getId room)) room roomsDict
         |> Rooms
+
+
+remove : Room -> Rooms -> Rooms
+remove room (Rooms roomsDict) =
+    Dict.remove (RoomId.toString (getId room)) roomsDict
+        |> Rooms
+
+
+isEmpty : Room -> Bool
+isEmpty room =
+    case room of
+        WaitingForPlayers { users } ->
+            Set.size users == 0
+
+        Playing { users } ->
+            Dict.size users == 0
 
 
 findUserRoom : UserId -> Rooms -> Maybe Room
@@ -96,22 +108,21 @@ leave userId rooms =
         Just room ->
             let
                 newRoom =
-                    removeFromRoom userId room
+                    case room of
+                        WaitingForPlayers state ->
+                            WaitingForPlayers { state | users = Set.remove userId state.users }
+
+                        Playing state ->
+                            Playing { state | users = Dict.remove userId state.users }
 
                 newRooms =
-                    insert newRoom rooms
+                    if isEmpty newRoom then
+                        remove newRoom rooms
+
+                    else
+                        insert newRoom rooms
             in
             ( Just newRoom, newRooms )
-
-
-removeFromRoom : UserId -> Room -> Room
-removeFromRoom userId room =
-    case room of
-        WaitingForPlayers state ->
-            WaitingForPlayers { state | users = Set.remove userId state.users }
-
-        Playing state ->
-            Playing { state | users = Dict.remove userId state.users }
 
 
 assignPlayer aUserId assignedUsers =
