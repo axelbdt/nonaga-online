@@ -1,6 +1,6 @@
-module Components exposing (joinRoomForm, messagesColumn, playAgainButton)
+module Components exposing (joinRoomForm, messagesColumn, playAgainButton, title)
 
-import Element exposing (..)
+import Element as El
 import Element.Font as Font
 import Element.Input as Input
 import Html
@@ -18,12 +18,20 @@ palette =
     Material.defaultPalette
 
 
+title text =
+    El.el
+        [ El.centerX
+        , Font.size 24
+        ]
+        (El.text text)
+
+
 joinRoomForm onSubmit roomId roomFull =
     let
         roomIdInput =
             { chips = []
             , text = roomId
-            , placeholder = Just (Input.placeholder [] (Element.text "Create or join a room"))
+            , placeholder = Just (Input.placeholder [] (El.text "Create or join a room"))
             , label = "roomId"
             , onChange = SetRoomIdInputText
             }
@@ -32,7 +40,7 @@ joinRoomForm onSubmit roomId roomFull =
         joinRoomButton =
             W.button
                 (Material.containedButton palette
-                    |> Customize.elementButton [ Element.centerX ]
+                    |> Customize.elementButton [ El.centerX ]
                 )
                 { text = "Enter room", icon = loginIcon, onPress = Just onSubmit }
 
@@ -40,8 +48,8 @@ joinRoomForm onSubmit roomId roomFull =
             Material.Icons.login |> Widget.Icon.elmMaterialIcons Color
 
         errorMessage =
-            Element.el [ Font.size 12, Element.centerX ]
-                (Element.text
+            El.el [ Font.size 12, El.centerX ]
+                (El.text
                     (if roomFull then
                         "This room is full, please enter another."
 
@@ -50,13 +58,13 @@ joinRoomForm onSubmit roomId roomFull =
                     )
                 )
     in
-    Element.el [ Element.centerX ]
-        (Element.html
+    El.el [ El.centerX ]
+        (El.html
             (Html.form
                 [ Html.Events.onSubmit onSubmit ]
-                [ Element.layout []
-                    (Element.column
-                        [ Element.padding 50, Element.spacing 12 ]
+                [ El.layout []
+                    (El.column
+                        [ El.spacing 12 ]
                         [ errorMessage
                         , roomIdInput
                         , joinRoomButton
@@ -70,11 +78,11 @@ joinRoomForm onSubmit roomId roomFull =
 playAgainButton onClick =
     W.textButton
         (Material.containedButton palette
-            |> Customize.elementButton [ Element.centerX ]
+            |> Customize.elementButton [ El.centerX ]
         )
         { text = "Play again", onPress = Just onClick }
 
 
 messagesColumn messages =
-    Element.column [ Element.centerX, Element.padding 8 ]
-        (List.map (\m -> Element.el [ centerX ] (Element.text m)) messages)
+    El.column [ El.centerX, El.padding 8 ]
+        (List.map (\m -> El.el [ El.centerX ] (El.text m)) messages)

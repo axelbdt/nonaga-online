@@ -4,7 +4,7 @@ import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import ClientState
 import Components
-import Element exposing (..)
+import Element as El
 import GraphicSVG.Widget as GraphicWidget
 import Lamdera exposing (sendToBackend)
 import Nonaga as Game
@@ -205,12 +205,28 @@ updateFromBackend msg model =
 
 view : Model -> Browser.Document FrontendMsg
 view model =
-    { title = ""
+    { title =
+        let
+            suffix =
+                " - Nonaga"
+        in
+        case model.state of
+            ClientState.RoomSelection _ ->
+                "Play Nonaga online!"
+
+            ClientState.WaitingForPlayers { roomId } ->
+                RoomId.toString roomId ++ suffix
+
+            ClientState.Playing { roomId } ->
+                RoomId.toString roomId ++ suffix
     , body =
-        [ Element.layout [ Element.width fill ]
+        [ El.layout [ El.width El.fill ]
             (case model.state of
                 ClientState.RoomSelection { roomIdInputText, roomFull } ->
-                    Components.joinRoomForm SubmitRoomId roomIdInputText roomFull
+                    El.column [ El.centerX, El.padding 24, El.spacing 24 ]
+                        [ Components.title "Play Nonaga online"
+                        , Components.joinRoomForm SubmitRoomId roomIdInputText roomFull
+                        ]
 
                 ClientState.WaitingForPlayers { playersNeeded } ->
                     let
@@ -220,7 +236,7 @@ view model =
                     Components.messagesColumn [ message ]
 
                 ClientState.Playing { player, gameModel } ->
-                    Element.column [ Element.width fill ]
+                    El.column [ El.width El.fill ]
                         [ let
                             playerInfo =
                                 "Playing as " ++ Game.playerText player
@@ -244,12 +260,12 @@ view model =
                             ]
                         , case Game.getWinner gameModel of
                             Nothing ->
-                                Element.none
+                                El.none
 
                             Just _ ->
                                 Components.playAgainButton (GameMsg Game.Reset)
-                        , Element.map GameMsg
-                            (Element.html
+                        , El.map GameMsg
+                            (El.html
                                 (GraphicWidget.view model.gameWidgetState (Game.view gameModel))
                             )
                         ]
