@@ -1,4 +1,4 @@
-module Components exposing (joinRoomForm, messagesColumn, playAgainButton, title)
+module Components exposing (footer, joinRoomForm, messagesColumn, playAgainButton, title)
 
 import Element as El
 import Element.Font as Font
@@ -86,3 +86,18 @@ playAgainButton onClick =
 messagesColumn messages =
     El.column [ El.centerX, El.padding 8 ]
         (List.map (\m -> El.el [ El.centerX ] (El.text m)) messages)
+
+
+footer =
+    let
+        link =
+            El.link [ Font.underline ]
+    in
+    El.column [ El.centerX, Font.size 12 ]
+        [ El.text
+            "Nonaga is an abstract strategy game by Viktor Bautista I Roca."
+        , El.row [ El.width El.fill, El.spaceEvenly, El.padding 12 ]
+            [ link { url = "https://www.steffen-spiele.de/fileadmin/media/Spiele/Nonaga/Nonaga_EN.pdf", label = El.text "Read the rules" }
+            , link { url = "https://www.steffen-spiele.de/index.php?id=2399#popup-4040", label = El.text "Buy it" }
+            ]
+        ]

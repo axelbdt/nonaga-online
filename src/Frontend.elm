@@ -221,54 +221,58 @@ view model =
                 RoomId.toString roomId ++ suffix
     , body =
         [ El.layout [ El.width El.fill ]
-            (case model.state of
-                ClientState.RoomSelection { roomIdInputText, roomFull } ->
-                    El.column [ El.centerX, El.padding 24, El.spacing 24 ]
-                        [ Components.title "Play Nonaga online"
-                        , Components.joinRoomForm SubmitRoomId roomIdInputText roomFull
-                        ]
-
-                ClientState.WaitingForPlayers { playersNeeded } ->
-                    let
-                        message =
-                            "Waiting for players: " ++ String.fromInt playersNeeded ++ " more needed"
-                    in
-                    Components.messagesColumn [ message ]
-
-                ClientState.Playing { player, gameModel } ->
-                    El.column [ El.width El.fill ]
-                        [ let
-                            playerInfo =
-                                "Playing as " ++ Game.playerText player
-
-                            turnInfo =
-                                case Game.getWinner gameModel of
-                                    Just winner ->
-                                        Game.playerText winner ++ " has won."
-
-                                    Nothing ->
-                                        case gameModel.turnPhase of
-                                            Game.MoveToken ->
-                                                Game.playerText gameModel.currentPlayer ++ " must move a token."
-
-                                            Game.MovePlatform ->
-                                                Game.playerText gameModel.currentPlayer ++ " must move a platform."
-                          in
-                          Components.messagesColumn
-                            [ playerInfo
-                            , turnInfo
+            (El.column
+                [ El.width El.fill, El.spacing 24 ]
+                [ case model.state of
+                    ClientState.RoomSelection { roomIdInputText, roomFull } ->
+                        El.column [ El.centerX, El.padding 24, El.spacing 24 ]
+                            [ Components.title "Play Nonaga online"
+                            , Components.joinRoomForm SubmitRoomId roomIdInputText roomFull
                             ]
-                        , case Game.getWinner gameModel of
-                            Nothing ->
-                                El.none
 
-                            Just _ ->
-                                Components.playAgainButton (GameMsg Game.Reset)
-                        , El.map GameMsg
-                            (El.html
-                                (GraphicWidget.view model.gameWidgetState (Game.view gameModel))
-                            )
-                        ]
+                    ClientState.WaitingForPlayers { playersNeeded } ->
+                        let
+                            message =
+                                "Waiting for players: " ++ String.fromInt playersNeeded ++ " more needed"
+                        in
+                        Components.messagesColumn [ message ]
+
+                    ClientState.Playing { player, gameModel } ->
+                        El.column [ El.width El.fill ]
+                            [ let
+                                playerInfo =
+                                    "Playing as " ++ Game.playerText player
+
+                                turnInfo =
+                                    case Game.getWinner gameModel of
+                                        Just winner ->
+                                            Game.playerText winner ++ " has won."
+
+                                        Nothing ->
+                                            case gameModel.turnPhase of
+                                                Game.MoveToken ->
+                                                    Game.playerText gameModel.currentPlayer ++ " must move a token."
+
+                                                Game.MovePlatform ->
+                                                    Game.playerText gameModel.currentPlayer ++ " must move a platform."
+                              in
+                              Components.messagesColumn
+                                [ playerInfo
+                                , turnInfo
+                                ]
+                            , case Game.getWinner gameModel of
+                                Nothing ->
+                                    El.none
+
+                                Just _ ->
+                                    Components.playAgainButton (GameMsg Game.Reset)
+                            , El.map GameMsg
+                                (El.html
+                                    (GraphicWidget.view model.gameWidgetState (Game.view gameModel))
+                                )
+                            ]
+                , Components.footer
+                ]
             )
         ]
     }
