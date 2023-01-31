@@ -1,6 +1,8 @@
 module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
+import Browser.Dom exposing (Viewport, getViewport)
+import Browser.Events exposing (onResize)
 import Browser.Navigation as Nav
 import ClientState
 import Components
@@ -9,6 +11,7 @@ import GraphicSVG.Widget as GraphicWidget
 import Lamdera exposing (sendToBackend)
 import Nonaga as Game
 import RoomId as RoomId
+import Task
 import Types exposing (..)
 import Url
 import Url.Parser as Parser
@@ -31,34 +34,50 @@ app =
 
 
 subscriptions model =
-    case model.state of
-        ClientState.RoomSelection _ ->
-            Sub.none
+    Sub.batch
+        [ Sub.map GameWidgetMsg GraphicWidget.subscriptions
+        , Sub.map WindowResized (onResize coordsToSize)
+        ]
 
-        ClientState.WaitingForPlayers _ ->
-            Sub.none
 
-        ClientState.Playing _ ->
-            Sub.map GameWidgetMsg GraphicWidget.subscriptions
+coordsToSize : Int -> Int -> Size
+coordsToSize x y =
+    { w = toFloat x, h = toFloat y }
+
+
+viewportToSize : Viewport -> Size
+viewportToSize vport =
+    { w = vport.viewport.width, h = vport.viewport.height }
+
+
+updateWindowSize =
+    Task.perform (viewportToSize >> WindowResized) getViewport
 
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
 init url key =
+    let
+        ( gameWidgetState, _ ) =
+            initGameWidget 1000 1000
+    in
     case parseRoomId url of
         Nothing ->
-            ( initialModel key, Cmd.none )
+            ( initialModel key gameWidgetState, Cmd.batch [ updateWindowSize ] )
 
         Just roomId ->
             let
                 model =
-                    initialModel key
+                    initialModel key gameWidgetState
 
                 clientState =
                     ClientState.RoomSelection { roomIdInputText = RoomId.toString roomId, roomFull = False }
             in
             ( model
-            , sendToBackend
-                (JoinOrCreateRoom Nothing roomId)
+            , Cmd.batch
+                [ sendToBackend
+                    (JoinOrCreateRoom Nothing roomId)
+                , updateWindowSize
+                ]
             )
 
 
@@ -69,12 +88,13 @@ initialClientState =
         }
 
 
-initialModel : Nav.Key -> FrontendModel
-initialModel key =
-    let
-        ( gameWidgetState, _ ) =
-            GraphicWidget.init 3000 1000 "gameWidget"
-    in
+initGameWidget : Float -> Float -> ( GraphicWidget.Model, Cmd GraphicWidget.Msg )
+initGameWidget width height =
+    GraphicWidget.init width height "gameWidget"
+
+
+initialModel : Nav.Key -> GraphicWidget.Model -> FrontendModel
+initialModel key gameWidgetState =
     { key = key
     , state = initialClientState
     , gameWidgetState = gameWidgetState
@@ -109,6 +129,16 @@ update msg model =
 
         NoOpFrontendMsg ->
             ( model, Cmd.none )
+
+        WindowResized { w, h } ->
+            let
+                ( gameWidgetState, gameWidgetCmd ) =
+                    initGameWidget (1.8 * w) (1.5 * h)
+
+                newModel =
+                    { model | gameWidgetState = gameWidgetState }
+            in
+            ( newModel, Cmd.map GameWidgetMsg gameWidgetCmd )
 
         GameMsg gameMsg ->
             case model.state of
@@ -220,9 +250,9 @@ view model =
             ClientState.Playing { roomId } ->
                 RoomId.toString roomId ++ suffix
     , body =
-        [ El.layout [ El.width El.fill ]
+        [ El.layout [ El.width El.fill, El.height El.fill ]
             (El.column
-                [ El.width El.fill, El.spacing 24 ]
+                [ El.width El.fill, El.centerY, El.spacing 24 ]
                 [ case model.state of
                     ClientState.RoomSelection { roomIdInputText, roomFull } ->
                         El.column [ El.centerX, El.padding 24, El.spacing 24 ]
@@ -230,12 +260,12 @@ view model =
                             , Components.joinRoomForm SubmitRoomId roomIdInputText roomFull
                             ]
 
-                    ClientState.WaitingForPlayers { playersNeeded } ->
+                    ClientState.WaitingForPlayers { roomId, playersNeeded } ->
                         let
-                            message =
-                                "Waiting for players: " ++ String.fromInt playersNeeded ++ " more needed"
+                            waitingMessage =
+                                "Waiting for players: " ++ String.fromInt playersNeeded ++ " more needed."
                         in
-                        Components.messagesColumn [ message ]
+                        Components.messagesColumn [ waitingMessage, "Invite a friend by sharing the link to this room." ]
 
                     ClientState.Playing { player, gameModel } ->
                         El.column [ El.width El.fill ]

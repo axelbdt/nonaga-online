@@ -1,4 +1,4 @@
-module Components exposing (footer, joinRoomForm, messagesColumn, playAgainButton, title)
+module Components exposing (footer, joinRoomForm, messagesColumn, playAgainButton, shareLink, title)
 
 import Element as El
 import Element.Font as Font
@@ -48,7 +48,7 @@ joinRoomForm onSubmit roomId roomFull =
             Material.Icons.login |> Widget.Icon.elmMaterialIcons Color
 
         errorMessage =
-            El.el [ Font.size 12, El.centerX ]
+            El.el [ Font.size 16, El.centerX ]
                 (El.text
                     (if roomFull then
                         "This room is full, please enter another."
@@ -88,12 +88,16 @@ messagesColumn messages =
         (List.map (\m -> El.el [ El.centerX ] (El.text m)) messages)
 
 
+shareLink url =
+    El.link [ Font.underline ] { url = url, label = El.text url }
+
+
 footer =
     let
         link =
             El.link [ Font.underline ]
     in
-    El.column [ El.centerX, Font.size 12 ]
+    El.column [ El.centerX, Font.size 16 ]
         [ El.text
             "Nonaga is an abstract strategy game by Viktor Bautista I Roca."
         , El.row [ El.width El.fill, El.spaceEvenly, El.padding 12 ]

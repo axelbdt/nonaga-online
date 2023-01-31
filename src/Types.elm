@@ -20,6 +20,10 @@ type alias FrontendModel =
     }
 
 
+type alias Size =
+    { w : Float, h : Float }
+
+
 type alias ClientState =
     ClientState.ClientState
 
@@ -57,6 +61,7 @@ type alias BackendModel =
 type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
+    | WindowResized Size
     | NoOpFrontendMsg
     | GameWidgetMsg GraphicWidget.Msg
     | GameMsg Game.Msg
