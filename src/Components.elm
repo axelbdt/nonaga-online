@@ -103,5 +103,6 @@ footer =
         , El.row [ El.width El.fill, El.spaceEvenly, El.padding 12 ]
             [ link { url = "https://www.steffen-spiele.de/fileadmin/media/Spiele/Nonaga/Nonaga_EN.pdf", label = El.text "Read the rules" }
             , link { url = "https://www.steffen-spiele.de/index.php?id=2399#popup-4040", label = El.text "Buy it" }
+            , link { url = "https://github.com/axelbdt/nonaga-online", label = El.text "Source code" }
             ]
         ]
