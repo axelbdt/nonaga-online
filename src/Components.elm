@@ -98,8 +98,8 @@ footer =
             El.link [ Font.underline ]
     in
     El.column [ El.centerX, Font.size 16 ]
-        [ El.text
-            "Nonaga is an abstract strategy game by Viktor Bautista I Roca."
+        [ El.paragraph [Font.center] [El.text
+            "Nonaga is an abstract strategy game by Viktor Bautista I Roca."]
         , El.row [ El.width El.fill, El.spaceEvenly, El.padding 12 ]
             [ link { url = "https://www.steffen-spiele.de/fileadmin/media/Spiele/Nonaga/Nonaga_EN.pdf", label = El.text "Read the rules" }
             , link { url = "https://www.steffen-spiele.de/index.php?id=2399#popup-4040", label = El.text "Buy it" }

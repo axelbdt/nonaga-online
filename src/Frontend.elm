@@ -33,6 +33,7 @@ app =
         }
 
 
+subscriptions : FrontendModel -> Sub FrontendMsg
 subscriptions model =
     Sub.batch
         [ Sub.map GameWidgetMsg GraphicWidget.subscriptions
@@ -50,6 +51,7 @@ viewportToSize vport =
     { w = vport.viewport.width, h = vport.viewport.height }
 
 
+updateWindowSize : Cmd FrontendMsg
 updateWindowSize =
     Task.perform (viewportToSize >> WindowResized) getViewport
 
@@ -81,6 +83,7 @@ init url key =
             )
 
 
+initialClientState : ClientState
 initialClientState =
     ClientState.RoomSelection
         { roomIdInputText = ""
