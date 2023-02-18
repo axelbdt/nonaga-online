@@ -2,4 +2,4 @@
 
 [Rulebook](https://www.steffen-spiele.de/fileadmin/media/Spiele/Nonaga/Nonaga_EN.pdf)
 
-[Play online](https://nonaga.lamdera.app/)
+[Play online](https://nonaga.com/)
